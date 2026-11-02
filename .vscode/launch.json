@@ -5,7 +5,11 @@
       "name": "MAMBA (Impeller)",
       "request": "launch",
       "type": "dart",
-      "program": "lib/main.dart"
+      "program": "lib/main.dart",
+      "toolArgs": [
+        "--dart-define=SUPABASE_URL=https://flkhtmjvedxwzgflfyov.supabase.co",
+        "--dart-define=SUPABASE_PUBLISHABLE_KEY=sb_publishable_0x62mwpdMUStgZMbJGVBcg_FjCRlQ-Z"
+      ]
     }
   ]
 }

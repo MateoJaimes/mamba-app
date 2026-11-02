@@ -19,13 +19,19 @@ class AuthPage extends StatefulWidget {
 
 class _AuthPageState extends State<AuthPage> {
   final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
+  final _firstNamesController = TextEditingController();
+  final _lastNamesController = TextEditingController();
+  final _documentNumberController = TextEditingController();
+  final _phoneController = TextEditingController();
+  final _birthDateController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmationController = TextEditingController();
 
   bool _isRegistering = false;
   AccountIntent _accountIntent = AccountIntent.tourist;
+  String _documentType = 'cc';
+  DateTime? _birthDate;
   bool _isPasswordVisible = false;
   bool _isSubmitting = false;
   String? _notice;
@@ -33,7 +39,11 @@ class _AuthPageState extends State<AuthPage> {
 
   @override
   void dispose() {
-    _nameController.dispose();
+    _firstNamesController.dispose();
+    _lastNamesController.dispose();
+    _documentNumberController.dispose();
+    _phoneController.dispose();
+    _birthDateController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     _confirmationController.dispose();
@@ -69,7 +79,12 @@ class _AuthPageState extends State<AuthPage> {
         final response = await auth.signUp(
           email: _emailController.text,
           password: _passwordController.text,
-          displayName: _nameController.text,
+          firstNames: _firstNamesController.text,
+          lastNames: _lastNamesController.text,
+          documentType: _documentType,
+          documentNumber: _documentNumberController.text,
+          birthDate: _birthDate!,
+          phoneNumber: _phoneController.text,
           intent: _accountIntent,
         );
 
@@ -163,6 +178,39 @@ class _AuthPageState extends State<AuthPage> {
       return 'Usa al menos 8 caracteres.';
     }
     return null;
+  }
+
+  String? _validateDocumentNumber(String? value) {
+    final normalized = (value ?? '').replaceAll(RegExp(r'[^a-zA-Z0-9]'), '');
+    if (normalized.length < 4 || normalized.length > 24) {
+      return 'Escribe un número de documento válido.';
+    }
+    return null;
+  }
+
+  String? _validatePhone(String? value) {
+    final digits = (value ?? '').replaceAll(RegExp(r'\D'), '');
+    if (digits.length < 7 || digits.length > 15) {
+      return 'Escribe un número de teléfono válido.';
+    }
+    return null;
+  }
+
+  Future<void> _pickBirthDate() async {
+    final today = DateTime.now();
+    final selected = await showDatePicker(
+      context: context,
+      initialDate: _birthDate ?? DateTime(today.year - 25, today.month, today.day),
+      firstDate: DateTime(today.year - 120),
+      lastDate: today,
+      helpText: 'Selecciona tu fecha de nacimiento',
+    );
+    if (selected == null || !mounted) return;
+    setState(() {
+      _birthDate = selected;
+      _birthDateController.text =
+          '${selected.day.toString().padLeft(2, '0')}/${selected.month.toString().padLeft(2, '0')}/${selected.year}';
+    });
   }
 
   @override
@@ -270,15 +318,81 @@ class _AuthPageState extends State<AuthPage> {
         children: [
           if (_isRegistering) ...[
             _AuthTextField(
-              controller: _nameController,
-              label: 'Nombre para mostrar',
-              hint: '¿Cómo te llamamos?',
+              controller: _firstNamesController,
+              label: 'Nombres',
+              hint: 'Como aparecen en tu documento',
               icon: Icons.person_outline_rounded,
               validator: (value) => (value?.trim().isNotEmpty ?? false)
                   ? null
-                  : 'Escribe tu nombre.',
+                  : 'Escribe tus nombres.',
               textCapitalization: TextCapitalization.words,
               textInputAction: TextInputAction.next,
+            ),
+            const SizedBox(height: 16),
+            _AuthTextField(
+              controller: _lastNamesController,
+              label: 'Apellidos',
+              hint: 'Como aparecen en tu documento',
+              icon: Icons.person_outline_rounded,
+              validator: (value) => (value?.trim().isNotEmpty ?? false)
+                  ? null
+                  : 'Escribe tus apellidos.',
+              textCapitalization: TextCapitalization.words,
+              textInputAction: TextInputAction.next,
+            ),
+            const SizedBox(height: 16),
+            DropdownButtonFormField<String>(
+              initialValue: _documentType,
+              decoration: const InputDecoration(
+                labelText: 'Tipo de documento',
+                prefixIcon: Icon(Icons.badge_outlined),
+              ),
+              items: const [
+                DropdownMenuItem(value: 'cc', child: Text('Cédula de ciudadanía')),
+                DropdownMenuItem(value: 'ce', child: Text('Cédula de extranjería')),
+                DropdownMenuItem(value: 'ti', child: Text('Tarjeta de identidad')),
+                DropdownMenuItem(value: 'ppt', child: Text('Permiso por Protección Temporal')),
+                DropdownMenuItem(value: 'passport', child: Text('Pasaporte')),
+              ],
+              onChanged: (value) => setState(() => _documentType = value ?? 'cc'),
+            ),
+            const SizedBox(height: 16),
+            _AuthTextField(
+              controller: _documentNumberController,
+              label: 'Número de documento',
+              hint: 'Sin puntos ni espacios',
+              icon: Icons.numbers_rounded,
+              validator: _validateDocumentNumber,
+              textCapitalization: TextCapitalization.characters,
+              textInputAction: TextInputAction.next,
+            ),
+            const SizedBox(height: 16),
+            _AuthTextField(
+              controller: _birthDateController,
+              label: 'Fecha de nacimiento',
+              hint: 'Día / Mes / Año',
+              icon: Icons.calendar_month_outlined,
+              readOnly: true,
+              onTap: _pickBirthDate,
+              validator: (_) => _birthDate == null ? 'Selecciona tu fecha de nacimiento.' : null,
+              textInputAction: TextInputAction.next,
+            ),
+            const SizedBox(height: 16),
+            _AuthTextField(
+              controller: _phoneController,
+              label: 'Teléfono de contacto',
+              hint: '+57 300 000 0000',
+              icon: Icons.phone_outlined,
+              keyboardType: TextInputType.phone,
+              validator: _validatePhone,
+              textInputAction: TextInputAction.next,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Tus datos personales se guardan de forma privada y no aparecen en tu perfil público.',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: AppColors.textSecondary,
+              ),
             ),
             const SizedBox(height: 16),
             Text('¿Cómo quieres empezar?', style: theme.textTheme.titleSmall),
@@ -448,6 +562,8 @@ class _AuthTextField extends StatelessWidget {
     this.obscureText = false,
     this.suffix,
     this.onSubmitted,
+    this.readOnly = false,
+    this.onTap,
   });
 
   final TextEditingController controller;
@@ -461,6 +577,8 @@ class _AuthTextField extends StatelessWidget {
   final bool obscureText;
   final Widget? suffix;
   final ValueChanged<String>? onSubmitted;
+  final bool readOnly;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -472,6 +590,8 @@ class _AuthTextField extends StatelessWidget {
       textCapitalization: textCapitalization,
       obscureText: obscureText,
       onFieldSubmitted: onSubmitted,
+      readOnly: readOnly,
+      onTap: onTap,
       autocorrect: false,
       enableSuggestions: !obscureText,
       decoration: InputDecoration(

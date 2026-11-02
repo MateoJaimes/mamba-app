@@ -4,6 +4,8 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../../core/services/mamba_data_service.dart';
+
 /// Device-local prototype storage. Replace with an authenticated backend before
 /// treating these booking requests as confirmed reservations.
 abstract final class LocalBookingStore {
@@ -12,6 +14,11 @@ abstract final class LocalBookingStore {
   static final changes = ValueNotifier<List<Map<String, dynamic>>>(const []);
 
   static Future<List<Map<String, dynamic>>> getAll() async {
+    if (MambaDataService.hasSignedInUser) {
+      final bookings = await MambaDataService.fetchBookings();
+      changes.value = List.unmodifiable(bookings);
+      return bookings;
+    }
     final preferences = await SharedPreferences.getInstance();
     final encoded = preferences.getString(_storageKey);
     if (encoded == null) return [];
@@ -36,6 +43,18 @@ abstract final class LocalBookingStore {
     required bool minorsSupervisionConfirmed,
     required bool minimumAgeConfirmed,
   }) async {
+    if (MambaDataService.hasSignedInUser) {
+      await MambaDataService.createBooking(
+        experience: experience,
+        date: date,
+        adults: adults,
+        minors: minors,
+        minorsSupervisionConfirmed: minorsSupervisionConfirmed,
+        minimumAgeConfirmed: minimumAgeConfirmed,
+      );
+      await getAll();
+      return;
+    }
     final preferences = await SharedPreferences.getInstance();
     final bookings = await getAll();
     bookings.add({

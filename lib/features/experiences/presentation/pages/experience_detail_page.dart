@@ -8,6 +8,7 @@ import '../../../../core/widgets/scroll_edge_blur.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../bookings/data/local_booking_store.dart';
 import '../../../hosts/data/demo_host_catalog.dart';
+import '../../../../core/services/mamba_data_service.dart';
 import '../../../reviews/domain/colombian_rating.dart';
 import '../../../reviews/presentation/widgets/colombian_rating_badge.dart';
 
@@ -23,6 +24,22 @@ class ExperienceDetailPage extends StatefulWidget {
 class _ExperienceDetailPageState extends State<ExperienceDetailPage> {
   int _imageIndex = 0;
   final ScrollController _scrollController = ScrollController();
+  late Future<Map<String, dynamic>?> _experienceFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _experienceFuture = MambaDataService.fetchExperience(widget.experienceId);
+  }
+
+  @override
+  void didUpdateWidget(covariant ExperienceDetailPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.experienceId != widget.experienceId) {
+      _imageIndex = 0;
+      _experienceFuture = MambaDataService.fetchExperience(widget.experienceId);
+    }
+  }
 
   @override
   void dispose() {
@@ -32,42 +49,47 @@ class _ExperienceDetailPageState extends State<ExperienceDetailPage> {
 
   @override
   Widget build(BuildContext context) {
-    final experience = DemoHostCatalog.experienceById(widget.experienceId);
-    if (experience == null) {
-      return Scaffold(
-        appBar: AppBar(
-          leading: IconButton(
-            tooltip: 'Cerrar',
-            onPressed: () => _close(context),
-            icon: const Icon(Icons.close_rounded),
-          ),
-        ),
-        body: const Center(child: Text('No encontramos este plan.')),
-      );
-    }
+    return FutureBuilder<Map<String, dynamic>?>(
+      future: _experienceFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const Scaffold(body: Center(child: CircularProgressIndicator()));
+        }
+        final experience = snapshot.data;
+        if (experience == null) {
+          return Scaffold(
+            appBar: AppBar(leading: IconButton(tooltip: 'Cerrar', onPressed: () => _close(context), icon: const Icon(Icons.close_rounded))),
+            body: const Center(child: Text('No encontramos este plan.')),
+          );
+        }
+        return _buildExperience(context, experience);
+      },
+    );
+  }
 
+  Widget _buildExperience(BuildContext context, Map<String, dynamic> experience) {
     final images = experience['images'] as List<String>;
     final providerId = experience['provider_id'] as String;
-    final host = DemoHostCatalog.hostById(providerId);
+    final host = experience['host_profile'] as Map<String, dynamic>? ?? DemoHostCatalog.hostById(providerId);
     final theme = Theme.of(context);
     return Scaffold(
-      body: ScrollEdgeBlur(
-        controller: _scrollController,
-        bottomExtent: 56,
-        child: CustomScrollView(
-          controller: _scrollController,
-          slivers: [
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          ScrollEdgeBlur(
+            controller: _scrollController,
+            bottomExtent: 56,
+            child: CustomScrollView(
+              controller: _scrollController,
+              slivers: [
             SliverAppBar(
               expandedHeight: 340,
               pinned: true,
               backgroundColor: Colors.transparent,
               surfaceTintColor: Colors.transparent,
               scrolledUnderElevation: 0,
-              leading: IconButton(
-                tooltip: 'Cerrar detalle',
-                onPressed: () => _close(context),
-                icon: const Icon(Icons.close_rounded, color: Colors.white),
-              ),
+              leading: const SizedBox.shrink(),
+              leadingWidth: 56,
               flexibleSpace: FlexibleSpaceBar(
                 background: Stack(
                   fit: StackFit.expand,
@@ -178,7 +200,7 @@ class _ExperienceDetailPageState extends State<ExperienceDetailPage> {
                             children: [
                               ClipOval(
                                 child: CachedNetworkImage(
-                                  imageUrl: host['avatar']!,
+                                  imageUrl: (host['avatar'] as String?) ?? '',
                                   width: 50,
                                   height: 50,
                                   fit: BoxFit.cover,
@@ -197,14 +219,14 @@ class _ExperienceDetailPageState extends State<ExperienceDetailPage> {
                                       style: theme.textTheme.bodySmall,
                                     ),
                                     Text(
-                                      host['name']!,
+                                      (host['name'] as String?) ?? 'Anfitrión MAMBA',
                                       style: theme.textTheme.titleSmall
                                           ?.copyWith(
                                             fontWeight: FontWeight.w800,
                                           ),
                                     ),
                                     Text(
-                                      host['handle']!,
+                                      (host['handle'] as String?) ?? '',
                                       style: theme.textTheme.bodySmall,
                                     ),
                                   ],
@@ -291,8 +313,19 @@ class _ExperienceDetailPageState extends State<ExperienceDetailPage> {
                 ],
               ),
             ),
-          ],
-        ),
+              ],
+            ),
+          ),
+          Positioned(
+            top: MediaQuery.paddingOf(context).top + 4,
+            left: 4,
+            child: IconButton(
+              tooltip: 'Cerrar detalle',
+              onPressed: () => _close(context),
+              icon: const Icon(Icons.close_rounded, color: Colors.white),
+            ),
+          ),
+        ],
       ),
       bottomNavigationBar: SafeArea(
         minimum: const EdgeInsets.fromLTRB(18, 8, 18, 12),
@@ -362,7 +395,6 @@ class _ExperienceDetailPageState extends State<ExperienceDetailPage> {
       ),
     );
   }
-
   void _close(BuildContext context) {
     if (context.canPop()) {
       context.pop();
@@ -739,49 +771,54 @@ class _MeetingPointMap extends StatelessWidget {
           border: Border.all(color: AppColors.border),
           borderRadius: BorderRadius.circular(22),
         ),
-        child: FlutterMap(
-          options: MapOptions(
-            initialCenter: point,
-            initialZoom: 15,
-            minZoom: 4,
-            maxZoom: 18,
-          ),
-          children: [
-            TileLayer(
-              urlTemplate:
-                  'https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}.png',
-              userAgentPackageName: 'com.mamba.mamba_app',
+        child: RepaintBoundary(
+          child: FlutterMap(
+            options: MapOptions(
+              initialCenter: point,
+              initialZoom: 15,
+              minZoom: 13,
+              maxZoom: 16,
             ),
-            MarkerLayer(
-              markers: [
-                Marker(
-                  point: point,
-                  width: 54,
-                  height: 62,
-                  child: const Icon(
-                    Icons.location_pin,
-                    size: 52,
-                    color: AppColors.primary,
-                    shadows: [
-                      Shadow(
-                        color: Colors.black87,
-                        blurRadius: 10,
-                        offset: Offset(0, 3),
-                      ),
-                    ],
+            children: [
+              TileLayer(
+                urlTemplate:
+                    'https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}.png',
+                userAgentPackageName: 'com.mamba.mamba_app',
+                maxNativeZoom: 16,
+                keepBuffer: 0,
+                panBuffer: 0,
+              ),
+              MarkerLayer(
+                markers: [
+                  Marker(
+                    point: point,
+                    width: 54,
+                    height: 62,
+                    child: const Icon(
+                      Icons.location_pin,
+                      size: 52,
+                      color: AppColors.primary,
+                      shadows: [
+                        Shadow(
+                          color: Colors.black87,
+                          blurRadius: 10,
+                          offset: Offset(0, 3),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
-            ),
-            RichAttributionWidget(
-              alignment: AttributionAlignment.bottomRight,
-              attributions: const [
-                TextSourceAttribution(
-                  '© Stadia Maps · © OpenMapTiles · © OpenStreetMap',
-                ),
-              ],
-            ),
-          ],
+                ],
+              ),
+              RichAttributionWidget(
+                alignment: AttributionAlignment.bottomRight,
+                attributions: const [
+                  TextSourceAttribution(
+                    '© Stadia Maps · © OpenMapTiles · © OpenStreetMap',
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );

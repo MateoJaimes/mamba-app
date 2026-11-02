@@ -5,9 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/services/mamba_data_service.dart';
 import '../../../reviews/domain/colombian_rating.dart';
 import '../../../reviews/presentation/widgets/colombian_rating_badge.dart';
-import '../../data/demo_host_catalog.dart';
 
 class HostProfilePage extends StatefulWidget {
   const HostProfilePage({super.key, required this.hostId});
@@ -21,10 +21,38 @@ class HostProfilePage extends StatefulWidget {
 class _HostProfilePageState extends State<HostProfilePage> {
   bool _following = false;
   int _selectedTab = 0;
+  Map<String, dynamic>? _host;
+  List<Map<String, dynamic>> _experiences = [];
+  List<Map<String, String>> _reviews = [];
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfile();
+  }
+
+  Future<void> _loadProfile() async {
+    final data = await Future.wait([
+      MambaDataService.fetchHost(widget.hostId),
+      MambaDataService.fetchExperiencesForHost(widget.hostId),
+      MambaDataService.fetchReviewsForHost(widget.hostId),
+      MambaDataService.isFollowingHost(widget.hostId),
+    ]);
+    if (!mounted) return;
+    setState(() {
+      _host = data[0] as Map<String, dynamic>?;
+      _experiences = data[1] as List<Map<String, dynamic>>;
+      _reviews = data[2] as List<Map<String, String>>;
+      _following = data[3] as bool;
+      _loading = false;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    final host = DemoHostCatalog.hostById(widget.hostId);
+    if (_loading) return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    final host = _host;
     if (host == null) {
       return Scaffold(
         appBar: AppBar(
@@ -38,8 +66,8 @@ class _HostProfilePageState extends State<HostProfilePage> {
       );
     }
 
-    final experiences = DemoHostCatalog.experiencesByHost(widget.hostId);
-    final reviews = DemoHostCatalog.reviewsByHost(widget.hostId);
+    final experiences = _experiences;
+    final reviews = _reviews;
     final theme = Theme.of(context);
     return Scaffold(
       body: SafeArea(
@@ -198,8 +226,19 @@ class _HostProfilePageState extends State<HostProfilePage> {
                               Expanded(
                                 flex: 2,
                                 child: OutlinedButton.icon(
-                                  onPressed: () =>
-                                      setState(() => _following = !_following),
+                                  onPressed: () async {
+                                    try {
+                                      final following = await MambaDataService
+                                          .toggleHostFollow(widget.hostId, _following);
+                                      if (!mounted) return;
+                                      setState(() => _following = following);
+                                    } catch (_) {
+                                      if (!mounted) return;
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(content: Text('No pudimos actualizar el seguimiento.')),
+                                      );
+                                    }
+                                  },
                                   icon: Icon(_following
                                       ? Icons.check_rounded
                                       : Icons.person_add_alt_1_rounded),

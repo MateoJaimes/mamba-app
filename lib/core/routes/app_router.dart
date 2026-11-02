@@ -11,6 +11,7 @@ import '../../features/hosts/presentation/pages/host_profile_page.dart';
 import '../../features/hosts/presentation/pages/host_search_page.dart';
 import '../../features/experiences/presentation/pages/experience_detail_page.dart';
 import '../../features/map/presentation/pages/map_page.dart';
+import '../../features/notifications/presentation/pages/notifications_page.dart';
 import 'main_shell.dart';
 import 'route_guards.dart';
 
@@ -64,6 +65,10 @@ GoRouter createAppRouter({
         builder: (context, state) => ExperienceDetailPage(
           experienceId: state.pathParameters['experienceId']!,
         ),
+      ),
+      GoRoute(
+        path: '/notifications',
+        builder: (context, state) => const NotificationsPage(),
       ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {

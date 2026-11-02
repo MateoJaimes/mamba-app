@@ -27,7 +27,12 @@ class AuthService {
   Future<AuthResponse> signUp({
     required String email,
     required String password,
-    required String displayName,
+    required String firstNames,
+    required String lastNames,
+    required String documentType,
+    required String documentNumber,
+    required DateTime birthDate,
+    required String phoneNumber,
     required AccountIntent intent,
   }) {
     return _client.auth.signUp(
@@ -35,7 +40,16 @@ class AuthService {
       password: password,
       emailRedirectTo: AppEnvironment.authRedirectUri,
       // This is only the user's requested onboarding path, never an access role.
-      data: {'display_name': displayName.trim(), 'account_intent': intent.name},
+      data: {
+        'display_name': '${firstNames.trim()} ${lastNames.trim()}'.trim(),
+        'first_names': firstNames.trim(),
+        'last_names': lastNames.trim(),
+        'document_type': documentType,
+        'document_number': documentNumber.trim().toUpperCase(),
+        'birth_date': '${birthDate.year.toString().padLeft(4, '0')}-${birthDate.month.toString().padLeft(2, '0')}-${birthDate.day.toString().padLeft(2, '0')}',
+        'phone_number': phoneNumber.trim(),
+        'account_intent': intent.name,
+      },
     );
   }
 

@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../core/widgets/scroll_edge_blur.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../hosts/data/demo_host_catalog.dart';
+import '../../../../core/services/mamba_data_service.dart';
 import '../feed_home_tab_request.dart';
 import '../widgets/experience_feed_card.dart';
 
@@ -122,21 +123,7 @@ class _FeedPageState extends State<FeedPage> {
     required int page,
     required int limit,
   }) async {
-    await Future.delayed(const Duration(milliseconds: 700));
-
-    final start = page * limit;
-    final end = start + limit;
-
-    if (start >= DemoHostCatalog.experiences.length) {
-      return [];
-    }
-
-    return DemoHostCatalog.experiences.sublist(
-      start,
-      end > DemoHostCatalog.experiences.length
-          ? DemoHostCatalog.experiences.length
-          : end,
-    );
+    return MambaDataService.fetchExperiences(offset: page * limit, limit: limit);
   }
 
   @override
@@ -298,7 +285,7 @@ class _FeedHeader extends StatelessWidget {
               ),
               IconButton(
                 tooltip: 'Notificaciones',
-                onPressed: () => _showNotifications(context),
+                onPressed: () => context.push('/notifications'),
                 icon: const Icon(Icons.star_rounded),
                 color: AppColors.primary,
               ),
@@ -309,55 +296,4 @@ class _FeedHeader extends StatelessWidget {
     );
   }
 
-  void _showNotifications(BuildContext context) {
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      builder: (context) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 38,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.outlineVariant,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              const SizedBox(height: 22),
-              const Icon(
-                Icons.star_rounded,
-                size: 38,
-                color: AppColors.primary,
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'Notificaciones',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Aquí verás novedades de tus planes y anfitriones.',
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppColors.textSecondary,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'Todavía no tienes novedades.',
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 }

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/services/mamba_data_service.dart';
 import '../../data/demo_host_catalog.dart';
 
 class HostSearchPage extends StatefulWidget {
@@ -15,6 +16,15 @@ class HostSearchPage extends StatefulWidget {
 class _HostSearchPageState extends State<HostSearchPage> {
   final _controller = TextEditingController();
   String _query = '';
+  List<Map<String, dynamic>> _hosts = [];
+
+  @override
+  void initState() {
+    super.initState();
+    MambaDataService.fetchHosts().then((hosts) {
+      if (mounted) setState(() => _hosts = hosts);
+    });
+  }
 
   @override
   void dispose() {
@@ -25,7 +35,10 @@ class _HostSearchPageState extends State<HostSearchPage> {
   @override
   Widget build(BuildContext context) {
     final query = _query.trim().replaceFirst(RegExp(r'^@'), '').toLowerCase();
-    final results = DemoHostCatalog.hosts.where((host) {
+    final hosts = _hosts.isEmpty
+        ? DemoHostCatalog.hosts.map((host) => Map<String, dynamic>.from(host)).toList()
+        : _hosts;
+    final results = hosts.where((host) {
       return query.isEmpty ||
           host['handle']!.toLowerCase().contains(query) ||
           host['name']!.toLowerCase().contains(query) ||

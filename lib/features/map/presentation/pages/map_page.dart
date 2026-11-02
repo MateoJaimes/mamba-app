@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -5,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/services/mamba_data_service.dart';
 import '../../../hosts/data/demo_host_catalog.dart';
 
 class MapPage extends StatefulWidget {
@@ -16,27 +19,57 @@ class MapPage extends StatefulWidget {
 
 class _MapPageState extends State<MapPage> {
   static const _medellin = LatLng(6.2442, -75.5812);
+  static const _mapExperienceLimit = 40;
   final MapController _mapController = MapController();
+  Timer? _zoomRequestTimer;
+  double _pendingZoomDelta = 0;
   String? _selectedExperienceId;
   String _selectedCategory = 'Todos';
+  List<Map<String, dynamic>> _experiences = [];
 
   static const _categories = ['Todos', 'Aventura', 'Cultura', 'Gastronomía'];
 
   @override
+  void initState() {
+    super.initState();
+    MambaDataService.fetchExperiences(limit: _mapExperienceLimit).then((experiences) {
+      if (!mounted) return;
+      setState(() => _experiences = experiences.where(_hasMapCoordinates).toList());
+    });
+  }
+
+  bool _hasMapCoordinates(Map<String, dynamic> experience) {
+    final latitude = experience['latitude'];
+    final longitude = experience['longitude'];
+    if (latitude is! num || longitude is! num) return false;
+    return latitude >= -90 && latitude <= 90 && longitude >= -180 && longitude <= 180;
+  }
+
+  @override
   void dispose() {
+    _zoomRequestTimer?.cancel();
     _mapController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final experiences = DemoHostCatalog.experiences.where((experience) {
+    final allExperiences = _experiences.isEmpty
+        ? DemoHostCatalog.experiences
+        : _experiences;
+    final experiences = allExperiences.where((experience) {
       return _selectedCategory == 'Todos' ||
           experience['category'] == _selectedCategory;
     }).toList();
-    final selected = _selectedExperienceId == null
-        ? null
-        : DemoHostCatalog.experienceById(_selectedExperienceId!);
+    Map<String, dynamic>? selected;
+    if (_selectedExperienceId != null) {
+      for (final item in allExperiences) {
+        if (item['id'] == _selectedExperienceId) {
+          selected = item;
+          break;
+        }
+      }
+    }
 
     return Scaffold(
       body: Stack(
@@ -48,16 +81,21 @@ class _MapPageState extends State<MapPage> {
                 initialCenter: _medellin,
                 initialZoom: 12.5,
                 minZoom: 9,
-                maxZoom: 18,
-                onTap: (_, _) => setState(() => _selectedExperienceId = null),
+                maxZoom: 17,
+                onTap: (_, _) {
+                  if (_selectedExperienceId != null) {
+                    setState(() => _selectedExperienceId = null);
+                  }
+                },
               ),
               children: [
                 TileLayer(
                   urlTemplate:
                       'https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}.png',
                   userAgentPackageName: 'com.mamba.mamba_app',
-                  maxNativeZoom: 18,
-                  panBuffer: 1,
+                  maxNativeZoom: 16,
+                  keepBuffer: 1,
+                  panBuffer: 0,
                 ),
                 MarkerLayer(
                   markers: experiences.map((experience) {
@@ -66,18 +104,19 @@ class _MapPageState extends State<MapPage> {
                     final price = (experience['price'] as String)
                         .replaceAll(r'$', '')
                         .replaceAll('.000', 'k');
+                    final latitude = experience['latitude'] as num;
+                    final longitude = experience['longitude'] as num;
                     return Marker(
                       point: LatLng(
-                        (experience['latitude'] as num).toDouble(),
-                        (experience['longitude'] as num).toDouble(),
+                        latitude.toDouble(),
+                        longitude.toDouble(),
                       ),
                       width: 90,
                       height: 48,
                       alignment: Alignment.bottomCenter,
                       child: GestureDetector(
                         onTap: () => setState(() => _selectedExperienceId = id),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 180),
+                        child: Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 10,
                             vertical: 7,
@@ -119,7 +158,7 @@ class _MapPageState extends State<MapPage> {
                       ),
                     );
                   }).toList(),
-                ),
+                  ),
               ],
             ),
           ),
@@ -182,8 +221,7 @@ class _MapPageState extends State<MapPage> {
                         showCheckmark: false,
                         onSelected: (_) => setState(() {
                           _selectedCategory = category;
-                          final categoryExperiences = DemoHostCatalog
-                              .experiences
+                          final categoryExperiences = allExperiences
                               .where(
                                 (item) =>
                                     category == 'Todos' ||
@@ -224,25 +262,13 @@ class _MapPageState extends State<MapPage> {
                 _MapIconButton(
                   tooltip: 'Acercar',
                   icon: Icons.add_rounded,
-                  onPressed: () {
-                    final currentZoom = _mapController.camera.zoom;
-                    _mapController.move(
-                      _mapController.camera.center,
-                      (currentZoom + 1).clamp(9, 18),
-                    );
-                  },
+                  onPressed: () => _changeZoom(.5),
                 ),
                 const SizedBox(height: 7),
                 _MapIconButton(
                   tooltip: 'Alejar',
                   icon: Icons.remove_rounded,
-                  onPressed: () {
-                    final currentZoom = _mapController.camera.zoom;
-                    _mapController.move(
-                      _mapController.camera.center,
-                      (currentZoom - 1).clamp(9, 18),
-                    );
-                  },
+                  onPressed: () => _changeZoom(-.5),
                 ),
               ],
             ),
@@ -295,6 +321,20 @@ class _MapPageState extends State<MapPage> {
         ],
       ),
     );
+  }
+
+  void _changeZoom(double delta) {
+    _pendingZoomDelta += delta;
+    _zoomRequestTimer?.cancel();
+    _zoomRequestTimer = Timer(const Duration(milliseconds: 140), () {
+      if (!mounted || !_mapController.camera.zoom.isFinite) return;
+      final camera = _mapController.camera;
+      final nextZoom = (camera.zoom + _pendingZoomDelta)
+          .clamp(9.0, 17.0)
+          .toDouble();
+      _pendingZoomDelta = 0;
+      if (nextZoom != camera.zoom) _mapController.move(camera.center, nextZoom);
+    });
   }
 }
 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 class ProfileMenu extends StatelessWidget {
   const ProfileMenu({super.key});
@@ -22,8 +23,8 @@ class ProfileMenu extends StatelessWidget {
         _ProfileMenuItem(
           icon: Icons.notifications_none,
           title: 'Notificaciones',
-          subtitle: 'Configura tus notificaciones',
-          onTap: () {},
+          subtitle: 'Novedades de tus planes y anfitriones',
+          onTap: () => context.push('/notifications'),
         ),
         _ProfileMenuItem(
           icon: Icons.help_outline,
