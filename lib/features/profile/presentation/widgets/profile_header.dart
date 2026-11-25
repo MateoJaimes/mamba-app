@@ -15,7 +15,7 @@ class ProfileHeader extends StatelessWidget {
     final metadataName = user?.userMetadata?['display_name'];
     final displayName = metadataName is String && metadataName.trim().isNotEmpty
         ? metadataName.trim()
-        : user?.email?.split('@').first ?? 'Explorador MAMBA';
+        : user?.email?.split('@').first ?? 'Explorador MAPO';
     final contact = user?.email ?? 'Descubre experiencias a tu manera';
 
     return Column(

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import '../../../../shared/widgets/mapo_network_image.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../reviews/domain/colombian_rating.dart';
 import '../../../reviews/presentation/widgets/colombian_rating_badge.dart';
@@ -10,11 +10,13 @@ class ExperienceImageCarousel extends StatefulWidget {
     required this.images,
     this.onTap,
     this.ratingLabel,
+    this.imageProviderBuilder,
   });
 
   final List<String> images;
   final VoidCallback? onTap;
   final String? ratingLabel;
+  final ImageProvider Function(String)? imageProviderBuilder;
 
   @override
   State<ExperienceImageCarousel> createState() =>
@@ -46,34 +48,52 @@ class _ExperienceImageCarouselState extends State<ExperienceImageCarousel> {
                 controller: _pageController,
                 itemCount: widget.images.length,
                 onPageChanged: (page) {
+                  if (page + 1 < widget.images.length) {
+                    precacheImage(
+                      ResizeImage(
+                        mapoImageProvider(widget.images[page + 1]),
+                        width: 900,
+                      ),
+                      context,
+                      onError: (_, _) {},
+                    );
+                  }
                   setState(() {
                     _currentPage = page;
                   });
                 },
                 itemBuilder: (context, index) {
-                  return CachedNetworkImage(
-                    imageUrl: widget.images[index],
+                  return Image(
+                    image:
+                        widget.imageProviderBuilder?.call(
+                          widget.images[index],
+                        ) ??
+                        ResizeImage(
+                          mapoImageProvider(widget.images[index]),
+                          width: 900,
+                        ),
                     fit: BoxFit.cover,
                     width: double.infinity,
-                    placeholder: (context, url) {
-                      return const ColoredBox(
-                        color: AppColors.surfaceRaised,
-                        child: Center(
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        ),
-                      );
-                    },
-                    errorWidget: (context, url, error) {
-                      return const ColoredBox(
-                        color: AppColors.surfaceRaised,
-                        child: Center(
-                          child: Icon(
-                            Icons.image_not_supported_outlined,
-                            size: 40,
+                    height: double.infinity,
+                    gaplessPlayback: true,
+                    loadingBuilder: (context, child, progress) =>
+                        progress == null
+                        ? child
+                        : const ColoredBox(
+                            color: AppColors.surfaceRaised,
+                            child: Center(
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
                           ),
+                    errorBuilder: (_, _, _) => const ColoredBox(
+                      color: AppColors.surfaceRaised,
+                      child: Center(
+                        child: Icon(
+                          Icons.image_not_supported_outlined,
+                          size: 40,
                         ),
-                      );
-                    },
+                      ),
+                    ),
                   );
                 },
               ),

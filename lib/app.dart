@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -5,9 +6,11 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/routes/app_router.dart';
 import 'core/routes/route_guards.dart';
 import 'core/theme/app_theme.dart';
+import 'core/services/currency_service.dart';
+import 'core/services/account_session.dart';
 
-class MambaApp extends StatefulWidget {
-  const MambaApp({
+class MapoApp extends StatefulWidget {
+  const MapoApp({
     super.key,
     required this.authConfigured,
     required this.authRequired,
@@ -17,12 +20,13 @@ class MambaApp extends StatefulWidget {
   final bool authRequired;
 
   @override
-  State<MambaApp> createState() => _MambaAppState();
+  State<MapoApp> createState() => _MapoAppState();
 }
 
-class _MambaAppState extends State<MambaApp> {
+class _MapoAppState extends State<MapoApp> {
   late final AuthRouterRefresh? _authRefresh;
   late final GoRouter _router;
+  StreamSubscription<AuthState>? _currencySubscription;
 
   @override
   void initState() {
@@ -35,12 +39,26 @@ class _MambaAppState extends State<MambaApp> {
       authRequired: widget.authRequired,
       authRefresh: _authRefresh,
     );
+    if (widget.authConfigured) {
+      CurrencyService.instance.load();
+      AccountSession.instance.refresh();
+      _currencySubscription = Supabase.instance.client.auth.onAuthStateChange
+          .listen(
+            (_) {
+              CurrencyService.instance.load();
+              AccountSession.instance.refresh();
+            },
+            onError: (Object error, StackTrace stackTrace) {
+              // AuthRouterRefresh presents a recoverable account screen.
+            },
+          );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
-      title: 'MAMBA',
+      title: 'MAPO',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.dark,
       routerConfig: _router,
@@ -49,6 +67,7 @@ class _MambaAppState extends State<MambaApp> {
 
   @override
   void dispose() {
+    _currencySubscription?.cancel();
     _router.dispose();
     _authRefresh?.dispose();
     super.dispose();

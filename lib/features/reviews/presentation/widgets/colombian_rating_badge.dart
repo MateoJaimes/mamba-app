@@ -72,7 +72,7 @@ class ColombianRatingBadge extends StatelessWidget {
     final compact = !prominent;
     final foreground = overImage ? Colors.white : _accent;
     final background = overImage
-        ? const Color(0xD91A211E)
+        ? const Color(0xD9192B49)
         : _accent.withValues(alpha: prominent ? .18 : .13);
     final border = overImage
         ? _accent.withValues(alpha: .8)

@@ -1,4 +1,6 @@
-# Hoja de ruta de MAMBA 1.0
+# Hoja de ruta de MAPO 1.0
+
+> Nota del 23 de noviembre de 2026: este documento conserva el plan original de octubre y sus casillas no representan el corte alfa actual. El estado operativo y los pasos de prueba están en el README. Ya existe backend NestJS, nueva base MAPO con migraciones, autenticación detrás de la API, solicitud/aprobación de anfitriones, editor de experiencias y gestión de inscripciones. La entrega real de correo, la primera cuenta administradora y las pruebas en Android físico siguen pendientes de configuración/validación.
 
 **Actualizada:** 26 de octubre de 2026  
 **Objetivo:** lanzar una app móvil para descubrir experiencias, reservarlas y gestionar las reservas.  
@@ -143,7 +145,7 @@
 - [ ] Confirmar qué esquema se expone por Data API. Revisar RLS, `GRANT`, funciones y vistas antes de habilitar acceso desde cliente.
 - [ ] Restringir las vistas administrativas/financieras y datos personales; evaluar `security_invoker` donde aplique.
 - [ ] Configurar logs sin tokens ni datos sensibles, alertas, respaldos y procedimiento de restauración.
-- [ ] Configurar ID de paquete, nombre MAMBA, iconos, firma y secretos de release para cada plataforma objetivo.
+- [ ] Configurar ID de paquete, nombre MAPO, iconos, firma y secretos de release para cada plataforma objetivo.
 - [ ] Preparar política de privacidad, términos, soporte y reglas de reservas/reembolsos.
 - [ ] Hacer una beta cerrada y corregir bloqueos antes de enviar a tiendas.
 

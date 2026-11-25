@@ -34,7 +34,7 @@ class ProfileMenu extends StatelessWidget {
         ),
         _ProfileMenuItem(
           icon: Icons.info_outline,
-          title: 'Acerca de MAMBA',
+          title: 'Acerca de MAPO',
           subtitle: 'Información de la aplicación',
           onTap: () {},
         ),

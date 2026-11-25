@@ -32,13 +32,14 @@ class ScrollEdgeBlur extends StatelessWidget {
         height: topExtent,
         child: AnimatedBuilder(
           animation: controller,
-          builder: (context, _) {
+          child: IgnorePointer(
+            child: _BlurredEdge(top: true, extent: topExtent),
+          ),
+          builder: (context, edge) {
             final isScrollingPastTop =
                 controller.hasClients && controller.offset > 1;
             if (!isScrollingPastTop) return const SizedBox.shrink();
-            return IgnorePointer(
-              child: _BlurredEdge(top: true, extent: topExtent),
-            );
+            return edge!;
           },
         ),
       ),
@@ -61,13 +62,7 @@ class _BlurredEdge extends StatelessWidget {
   final bool top;
   final double extent;
 
-  static const _layers = [
-    (1.0, 0.55),
-    (0.8, 0.75),
-    (0.6, 1.0),
-    (0.4, 1.3),
-    (0.2, 1.6),
-  ];
+  static const _layers = [(1.0, 1.0)];
 
   @override
   Widget build(BuildContext context) {

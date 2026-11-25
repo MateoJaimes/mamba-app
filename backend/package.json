@@ -1,0 +1,33 @@
+{
+  "name": "mapo-backend",
+  "version": "1.0.0",
+  "private": true,
+  "engines": {
+    "node": "24.x"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node --env-file-if-exists=.env.local dist/main.js",
+    "start:dev": "npm run build && npm start",
+    "test": "npm run build && node --test test/*.test.cjs",
+    "configure:auth": "powershell -NoProfile -File scripts/configure-auth.ps1 -Apply"
+  },
+  "dependencies": {
+    "@nestjs/common": "11.2.11",
+    "@nestjs/config": "4.0.4",
+    "@nestjs/core": "11.2.11",
+    "@nestjs/platform-express": "11.2.11",
+    "@nestjs/throttler": "6.8.0",
+    "nodemailer": "10.6.1",
+    "reflect-metadata": "0.2.2",
+    "rxjs": "7.8.2",
+    "sharp": "0.35.5"
+  },
+  "devDependencies": {
+    "@types/express": "5.0.6",
+    "@types/multer": "2.3.0",
+    "@types/node": "24.10.1",
+    "@types/nodemailer": "8.0.2",
+    "typescript": "5.9.3"
+  }
+}

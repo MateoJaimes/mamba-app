@@ -4,54 +4,71 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../constants/env.dart';
 import '../../features/hosts/data/demo_host_catalog.dart';
 
-/// Supabase-backed reads and writes used by the current MAMBA screens.
+/// Supabase-backed reads and writes used by the current MAPO screens.
 /// Demo content remains available before Auth is configured or signed in.
-abstract final class MambaDataService {
+abstract final class MapoDataService {
   static bool get isReady => AppEnvironment.hasSupabaseConfig;
   static bool get hasSignedInUser => _signedIn;
-  static String? get currentUserId => _signedIn ? _client.auth.currentUser?.id : null;
+  static String? get currentUserId =>
+      _signedIn ? _client.auth.currentUser?.id : null;
   static SupabaseClient get _client => Supabase.instance.client;
   static bool get _signedIn => isReady && _client.auth.currentUser != null;
 
   static Future<List<Map<String, dynamic>>> fetchExperiences({
     int offset = 0,
     int limit = 20,
+    String? category,
   }) async {
     if (!isReady) return _demoExperiences(offset, limit);
     try {
-      final rows = await _client
-          .from('experience_feed')
-          .select()
+      var query = _client.from('experience_feed').select();
+      if (category != null && category != 'Todos') {
+        query = query.contains('categories', [category]);
+      }
+      final rows = await query
           .order('published_at', ascending: false)
           .range(offset, offset + limit - 1);
-      return (rows as List).map((row) => _experienceMap(
-        Map<String, dynamic>.from(row as Map),
-      )).toList();
+      return (rows as List)
+          .map((row) => _experienceMap(Map<String, dynamic>.from(row as Map)))
+          .toList();
     } catch (_) {
-      return _demoExperiences(offset, limit);
+      rethrow;
     }
   }
 
   static Future<Map<String, dynamic>?> fetchExperience(String id) async {
     if (!isReady) return DemoHostCatalog.experienceById(id);
     try {
-      final row = await _client.from('experience_feed').select().eq('id', id).maybeSingle();
-      if (row == null) return DemoHostCatalog.experienceById(id);
+      final row = await _client
+          .from('experience_feed')
+          .select()
+          .eq('id', id)
+          .maybeSingle();
+      if (row == null) return null;
       final experience = _experienceMap(row);
       experience['host_profile'] = await fetchHost('${row['provider_id']}');
       return experience;
     } catch (_) {
-      return DemoHostCatalog.experienceById(id);
+      rethrow;
     }
   }
 
   static Future<List<Map<String, dynamic>>> fetchHosts() async {
-    if (!isReady) return DemoHostCatalog.hosts.map((e) => Map<String, dynamic>.from(e)).toList();
+    if (!isReady) {
+      return DemoHostCatalog.hosts
+          .map((e) => Map<String, dynamic>.from(e))
+          .toList();
+    }
     try {
-      final rows = await _client.from('host_public_profiles').select().order('name');
-      return (rows as List).map((row) => _hostMap(Map<String, dynamic>.from(row as Map))).toList();
+      final rows = await _client
+          .from('host_public_profiles')
+          .select()
+          .order('name');
+      return (rows as List)
+          .map((row) => _hostMap(Map<String, dynamic>.from(row as Map)))
+          .toList();
     } catch (_) {
-      return DemoHostCatalog.hosts.map((e) => Map<String, dynamic>.from(e)).toList();
+      rethrow;
     }
   }
 
@@ -61,24 +78,45 @@ abstract final class MambaDataService {
       return host == null ? null : Map<String, dynamic>.from(host);
     }
     try {
-      final row = await _client.from('host_public_profiles').select().eq('id', id).maybeSingle();
+      final row = await _client
+          .from('host_public_profiles')
+          .select()
+          .eq('id', id)
+          .maybeSingle();
       if (row != null) return _hostMap(row);
-    } catch (_) {}
-    final host = DemoHostCatalog.hostById(id);
-    return host == null ? null : Map<String, dynamic>.from(host);
+    } catch (_) {
+      rethrow;
+    }
+    return null;
   }
 
-  static Future<List<Map<String, dynamic>>> fetchExperiencesForHost(String id) async {
+  static Future<List<Map<String, dynamic>>> fetchExperiencesForHost(
+    String id,
+  ) async {
+    if (isReady) {
+      final rows = await _client
+          .from('experience_feed')
+          .select()
+          .eq('provider_id', id)
+          .order('published_at', ascending: false);
+      return rows.map((row) => _experienceMap(row)).toList();
+    }
     final rows = await fetchExperiences(limit: 100);
     final matching = rows.where((row) => row['provider_id'] == id).toList();
     if (matching.isNotEmpty || isReady) return matching;
     return DemoHostCatalog.experiencesByHost(id);
   }
 
-  static Future<List<Map<String, String>>> fetchReviewsForHost(String id) async {
+  static Future<List<Map<String, String>>> fetchReviewsForHost(
+    String id,
+  ) async {
     if (isReady) {
       try {
-        final rows = await _client.from('review_feed').select().eq('host_profile_id', id).order('created_at', ascending: false);
+        final rows = await _client
+            .from('review_feed')
+            .select()
+            .eq('host_profile_id', id)
+            .order('created_at', ascending: false);
         return (rows as List).map((raw) {
           final row = Map<String, dynamic>.from(raw as Map);
           return <String, String>{
@@ -89,14 +127,20 @@ abstract final class MambaDataService {
             'comment': '${row['comment'] ?? ''}',
           };
         }).toList();
-      } catch (_) {}
+      } catch (_) {
+        rethrow;
+      }
     }
     return DemoHostCatalog.reviewsByHost(id);
   }
 
   static Future<List<Map<String, dynamic>>> fetchBookings() async {
     if (!_signedIn) return [];
-    final rows = await _client.from('my_bookings').select().order('date');
+    final rows = await _client
+        .from('my_bookings')
+        .select()
+        .eq('user_id', currentUserId!)
+        .order('date');
     return (rows as List).map((raw) {
       final row = Map<String, dynamic>.from(raw as Map);
       return {
@@ -106,12 +150,13 @@ abstract final class MambaDataService {
         'price': _formatPrice(row['total_amount']),
         'image': row['image'] ?? '',
         'date': row['date'],
-        'guests': row['guests'] ?? ((row['adults'] ?? 0) + (row['minors'] ?? 0)),
+        'guests':
+            row['guests'] ?? ((row['adults'] ?? 0) + (row['minors'] ?? 0)),
       };
     }).toList();
   }
 
-  static Future<void> createBooking({
+  static Future<Map<String, dynamic>> createBooking({
     required Map<String, dynamic> experience,
     required DateTime date,
     required int adults,
@@ -119,35 +164,64 @@ abstract final class MambaDataService {
     required bool minorsSupervisionConfirmed,
     required bool minimumAgeConfirmed,
   }) async {
-    if (!_signedIn) throw StateError('Inicia sesión para solicitar una inscripción.');
-    await _client.from('bookings').insert({
-      'user_id': _client.auth.currentUser!.id,
-      'experience_id': experience['id'],
-      'booking_date': DateFormat('yyyy-MM-dd').format(date),
-      'adults': adults,
-      'minors': minors,
-      'minors_supervision_confirmed': minorsSupervisionConfirmed,
-      'minimum_age_confirmed': minimumAgeConfirmed,
-    });
+    if (!_signedIn) {
+      throw StateError('Inicia sesión para solicitar una inscripción.');
+    }
+    final booking = await _client
+        .from('bookings')
+        .insert({
+          'user_id': _client.auth.currentUser!.id,
+          'experience_id': experience['id'],
+          'booking_date': DateFormat('yyyy-MM-dd').format(date),
+          'adults': adults,
+          'minors': minors,
+          'minors_supervision_confirmed': minorsSupervisionConfirmed,
+          'minimum_age_confirmed': minimumAgeConfirmed,
+        })
+        .select()
+        .single();
+    if (booking['status'] != 'accepted') {
+      throw StateError(
+        'Tu inscripción todavía no está confirmada. Revisa Mis inscripciones antes de volver a intentarlo.',
+      );
+    }
+    return booking;
   }
 
-  static Future<bool> toggleExperienceLike(String experienceId, bool liked) async {
+  static Future<bool> toggleExperienceLike(
+    String experienceId,
+    bool liked,
+  ) async {
     if (!_signedIn) return liked;
     if (liked) {
-      await _client.from('experience_likes').delete().eq('user_id', _client.auth.currentUser!.id).eq('experience_id', experienceId);
+      await _client
+          .from('experience_likes')
+          .delete()
+          .eq('user_id', _client.auth.currentUser!.id)
+          .eq('experience_id', experienceId);
       return false;
     }
-    await _client.from('experience_likes').insert({'user_id': _client.auth.currentUser!.id, 'experience_id': experienceId});
+    await _client.from('experience_likes').insert({
+      'user_id': _client.auth.currentUser!.id,
+      'experience_id': experienceId,
+    });
     return true;
   }
 
   static Future<bool> toggleFavorite(String experienceId, bool saved) async {
     if (!_signedIn) return saved;
     if (saved) {
-      await _client.from('favorites').delete().eq('user_id', _client.auth.currentUser!.id).eq('experience_id', experienceId);
+      await _client
+          .from('favorites')
+          .delete()
+          .eq('user_id', _client.auth.currentUser!.id)
+          .eq('experience_id', experienceId);
       return false;
     }
-    await _client.from('favorites').insert({'user_id': _client.auth.currentUser!.id, 'experience_id': experienceId});
+    await _client.from('favorites').insert({
+      'user_id': _client.auth.currentUser!.id,
+      'experience_id': experienceId,
+    });
     return true;
   }
 
@@ -184,7 +258,9 @@ abstract final class MambaDataService {
   }
 
   static Future<void> deleteComment(String commentId) async {
-    if (!_signedIn) throw StateError('Inicia sesión para eliminar comentarios.');
+    if (!_signedIn) {
+      throw StateError('Inicia sesión para eliminar comentarios.');
+    }
     await _client
         .from('experience_comments')
         .delete()
@@ -194,15 +270,22 @@ abstract final class MambaDataService {
 
   static Future<List<Map<String, dynamic>>> fetchNotifications() async {
     if (!_signedIn) return const [];
-    final rows = await _client.from('notifications').select()
+    final rows = await _client
+        .from('notifications')
+        .select()
         .order('created_at', ascending: false);
-    return (rows as List).map((row) => Map<String, dynamic>.from(row as Map)).toList();
+    return (rows as List)
+        .map((row) => Map<String, dynamic>.from(row as Map))
+        .toList();
   }
 
   static Future<void> markNotificationRead(String notificationId) async {
     if (!_signedIn) return;
-    await _client.from('notifications').update({'read_at': DateTime.now().toUtc().toIso8601String()})
-        .eq('id', notificationId).eq('user_id', _client.auth.currentUser!.id);
+    await _client
+        .from('notifications')
+        .update({'read_at': DateTime.now().toUtc().toIso8601String()})
+        .eq('id', notificationId)
+        .eq('user_id', _client.auth.currentUser!.id);
   }
 
   static Future<List<Map<String, dynamic>>> fetchComments(
@@ -225,18 +308,29 @@ abstract final class MambaDataService {
 
   static Future<bool> isFollowingHost(String hostId) async {
     if (!_signedIn) return false;
-    final row = await _client.from('host_follows').select('host_profile_id')
-        .eq('follower_id', _client.auth.currentUser!.id).eq('host_profile_id', hostId).maybeSingle();
+    final row = await _client
+        .from('host_follows')
+        .select('host_profile_id')
+        .eq('follower_id', _client.auth.currentUser!.id)
+        .eq('host_profile_id', hostId)
+        .maybeSingle();
     return row != null;
   }
 
   static Future<bool> toggleHostFollow(String hostId, bool following) async {
     if (!_signedIn) return following;
     if (following) {
-      await _client.from('host_follows').delete().eq('follower_id', _client.auth.currentUser!.id).eq('host_profile_id', hostId);
+      await _client
+          .from('host_follows')
+          .delete()
+          .eq('follower_id', _client.auth.currentUser!.id)
+          .eq('host_profile_id', hostId);
       return false;
     }
-    await _client.from('host_follows').insert({'follower_id': _client.auth.currentUser!.id, 'host_profile_id': hostId});
+    await _client.from('host_follows').insert({
+      'follower_id': _client.auth.currentUser!.id,
+      'host_profile_id': hostId,
+    });
     return true;
   }
 
@@ -258,16 +352,20 @@ abstract final class MambaDataService {
 
   static Map<String, dynamic> _experienceMap(Map<String, dynamic> row) {
     final score = (row['experience_rating_score'] as num?)?.round();
-    final images = (row['images'] as List? ?? const []).map((e) => '$e').toList();
+    final images = (row['images'] as List? ?? const [])
+        .map((e) => '$e')
+        .toList();
     return {
       ...row,
-      'provider': row['provider'] ?? 'Anfitrión MAMBA',
+      'provider': row['provider'] ?? 'Anfitrión MAPO',
       'price': _formatPrice(row['price_amount']),
       'duration': _formatDuration(row['duration_minutes']),
       'images': images.isEmpty ? <String>[''] : images,
       'max_people': row['max_people'] ?? 10,
       'minor_supervision_required': row['minors_supervision_required'] ?? false,
-      'experience_rating': score == null ? 'Aún sin reseñas' : _experienceRating(score),
+      'experience_rating': score == null
+          ? 'Aún sin reseñas'
+          : _experienceRating(score),
       'host_rating': _hostRating(row['host_rating_score']),
       'reviews': '${row['reviews_count'] ?? 0}',
       'is_liked_by_me': row['is_liked_by_me'] == true,
@@ -286,16 +384,25 @@ abstract final class MambaDataService {
   }
 
   static String _experienceRating(int? score) => switch (score) {
-    1 => 'No fue lo mío', 2 => 'Buen parche', 3 => 'Súper parche',
-    4 => 'Planazo', 5 => '¡Una chimba!', _ => 'Aún sin reseñas',
+    1 => 'No fue lo mío',
+    2 => 'Buen parche',
+    3 => 'Súper parche',
+    4 => 'Planazo',
+    5 => '¡Una chimba!',
+    _ => 'Aún sin reseñas',
   };
 
   static String _hostRating(Object? raw) => switch ((raw as num?)?.round()) {
-    1 => 'No volvería', 2 => 'Atención normal', 3 => 'Buen anfitrión',
-    4 => 'Muy buena energía', 5 => 'Se lució', _ => 'Aún sin reseñas',
+    1 => 'No volvería',
+    2 => 'Atención normal',
+    3 => 'Buen anfitrión',
+    4 => 'Muy buena energía',
+    5 => 'Se lució',
+    _ => 'Aún sin reseñas',
   };
 
-  static String _atHandle(String handle) => handle.startsWith('@') ? handle : '@$handle';
+  static String _atHandle(String handle) =>
+      handle.startsWith('@') ? handle : '@$handle';
 
   static String _relativeDate(Object? raw) {
     final date = DateTime.tryParse('$raw')?.toLocal();

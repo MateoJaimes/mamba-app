@@ -9,9 +9,9 @@ abstract final class AppTheme {
     scaffoldBackgroundColor: AppColors.background,
     colorScheme: const ColorScheme.dark(
       primary: AppColors.primary,
-      onPrimary: Color(0xFF06251A),
-      secondary: AppColors.primaryDark,
-      onSecondary: Color(0xFF06251A),
+      onPrimary: Color(0xFF0E1B34),
+      secondary: AppColors.secondary,
+      onSecondary: Color(0xFF0E1B34),
       surface: AppColors.surface,
       onSurface: AppColors.textPrimary,
       surfaceContainerHighest: AppColors.surfaceRaised,
@@ -40,7 +40,7 @@ abstract final class AppTheme {
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
         backgroundColor: AppColors.primary,
-        foregroundColor: const Color(0xFF06251A),
+        foregroundColor: const Color(0xFF0E1B34),
         shape: const StadiumBorder(),
         padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
       ),
@@ -55,11 +55,13 @@ abstract final class AppTheme {
     ),
     textTheme: const TextTheme(
       headlineSmall: TextStyle(
+        fontFamily: 'Roboto Condensed',
         color: AppColors.textPrimary,
         fontWeight: FontWeight.w700,
         letterSpacing: -0.5,
       ),
       titleLarge: TextStyle(
+        fontFamily: 'Roboto Condensed',
         color: AppColors.textPrimary,
         fontWeight: FontWeight.w700,
         letterSpacing: -0.3,

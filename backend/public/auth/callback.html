@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Continúa en MAPO</title>
+  <link rel="icon" type="image/png" href="/branding/mapo-icon.png">
+  <style>
+    :root{color-scheme:dark;font-family:Arial,Helvetica,sans-serif;background:#0E1B34;color:#F7F6F1}
+    *{box-sizing:border-box}body{margin:0;min-height:100svh;display:grid;place-items:center;padding:40px 22px}
+    main{width:100%;max-width:460px}header{margin-bottom:44px}header img{width:160px;height:auto;display:block}
+    .status{width:54px;height:54px;border:1px solid #53665b;border-radius:50%;display:grid;place-items:center;color:#59CFC4;font-size:28px;margin-bottom:24px}
+    h1{font-size:clamp(30px,7vw,40px);line-height:1.12;letter-spacing:-1px;margin:0 0 20px;text-wrap:balance}
+    p{line-height:1.65;color:#D5DFED;margin:0 0 22px}.primary{display:block;text-align:center;background:#59CFC4;color:#0E1B34;padding:17px 24px;border-radius:30px;text-decoration:none;font-weight:700;margin:28px 0 22px}
+    a:focus-visible{outline:3px solid #F7F6F1;outline-offset:5px}.help{border-top:1px solid #35443c;padding-top:22px;font-size:14px;color:#B6C4D8}.help p{font-size:14px;color:#B6C4D8;margin-bottom:14px}.help a{color:#D5DFED;text-underline-offset:3px}
+    footer{margin-top:32px;font-size:12px;color:#B6C4D8}[hidden]{display:none!important}
+  </style>
+</head>
+<body>
+  <main>
+    <header><img src="/branding/mapo-logo.png" alt="MAPO" width="160" height="80"></header>
+    <div id="status" class="status" aria-hidden="true">↗</div>
+    <section aria-live="polite">
+      <h1 id="title">Continúa en MAPO.</h1>
+      <p id="message">Abre la app para continuar con tu cuenta. Si venías de un correo, usa el enlace más reciente.</p>
+      <a id="open" class="primary" href="mapo://auth-callback">Abrir MAPO</a>
+      <p id="next">Entra con tu correo y contraseña si la app te lo pide.</p>
+    </section>
+    <div class="help">
+      <p id="help">¿No se abre? Usa el mismo celular donde tienes instalada MAPO y toca el botón. En un computador, abre el correo desde ese celular.</p>
+      <p>No necesitas volver a registrarte. Si el enlace venció, solicita otro desde MAPO.</p>
+      <a href="mailto:somosmapoapp@gmail.com">Necesito ayuda</a>
+    </div>
+    <noscript><p class="help">Tu navegador tiene JavaScript desactivado. Abre MAPO para iniciar sesión. Para recuperar tu contraseña, abre este enlace en un navegador con JavaScript activado y en el mismo celular.</p></noscript>
+    <footer>Tu mapa de experiencias.</footer>
+  </main>
+  <script>
+    (function () {
+      'use strict';
+      var query = new URLSearchParams(location.search);
+      var hash = new URLSearchParams(location.hash.slice(1));
+      function value(key) { return hash.get(key) || query.get(key) || ''; }
+      var flow = value('type') || query.get('flow') || '';
+      var error = value('error') || value('error_code') || value('error_description');
+      var hasSession = value('access_token') && value('refresh_token');
+      var hasCode = !!value('code');
+      var title = document.getElementById('title');
+      var message = document.getElementById('message');
+      var next = document.getElementById('next');
+      var open = document.getElementById('open');
+      // Clear credentials without putting them in storage or analytics.
+      try { history.replaceState(null, '', location.pathname); } catch (_) {}
+      if (error) {
+        document.getElementById('status').textContent = '!';
+        var expired = /expired|otp_expired|already|invalid|access_denied/i.test(error);
+        title.textContent = expired ? 'Este enlace ya no está disponible.' : 'No pudimos completar el enlace.';
+        message.textContent = 'Puede haber vencido o haber sido usado. Abre MAPO y solicita un correo nuevo. Si ya confirmaste tu cuenta, inicia sesión normalmente.';
+        next.textContent = flow === 'recovery' ? 'En MAPO, elige «Olvidé mi contraseña» y usa solo el correo más reciente.' : 'No hace falta crear otra cuenta.';
+        open.textContent = 'Volver a MAPO';
+        return;
+      }
+      if (!hasCode && !hasSession) {
+        next.textContent = 'Si quieres confirmar tu correo o recuperar tu contraseña, vuelve al mensaje más reciente y toca su botón.';
+        return;
+      }
+      // Forward only auth fields, to one fixed app destination.
+      var allowed = ['code','type','access_token','refresh_token','expires_in','expires_at','token_type'];
+      var q = new URLSearchParams(), h = new URLSearchParams();
+      allowed.forEach(function (key) {
+        if (query.has(key)) q.set(key, query.get(key));
+        if (hash.has(key)) h.set(key, hash.get(key));
+      });
+      open.href = 'mapo://auth-callback' + (q.toString() ? '?' + q.toString() : '') + (h.toString() ? '#' + h.toString() : '');
+      if (flow === 'recovery') {
+        title.textContent = 'Crea tu nueva contraseña.';
+        message.textContent = 'Abre MAPO en el mismo celular donde pediste el cambio. La app te mostrará el formulario para guardar tu nueva contraseña.';
+        open.textContent = 'Cambiar contraseña en MAPO';
+        next.textContent = 'Mantén esta página abierta hasta continuar en la app. Si el enlace no funciona, solicita otro desde «Olvidé mi contraseña».';
+      } else if (flow === 'email_change') {
+        title.textContent = 'Continúa con tu nuevo correo.';
+        message.textContent = 'Abre MAPO para actualizar tu sesión. Por seguridad, el cambio puede requerir confirmar tanto el correo anterior como el nuevo.';
+        next.textContent = 'Revisa ambas bandejas de entrada y sigue las instrucciones de los correos.';
+      } else if (flow === 'signup' || flow === 'email') {
+        title.textContent = 'Tu próximo parche empieza aquí.';
+        message.textContent = 'Ya volviste del enlace de verificación. Abre MAPO para terminar de entrar y empezar a explorar.';
+        next.textContent = 'Si abriste el correo en otro dispositivo, inicia sesión con tu correo y contraseña en MAPO.';
+      } else {
+        message.textContent = 'Abre MAPO en el mismo celular donde comenzaste para completar el acceso de forma segura.';
+        next.textContent = 'Si el enlace ya se usó o venció, solicita uno nuevo desde la app.';
+      }
+      // No automatic custom-scheme navigation: keep embedded browsers usable.
+    }());
+  </script>
+</body>
+</html>

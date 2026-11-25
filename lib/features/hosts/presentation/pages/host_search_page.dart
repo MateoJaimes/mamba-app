@@ -1,10 +1,9 @@
-import 'package:cached_network_image/cached_network_image.dart';
+import '../../../../shared/widgets/mapo_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/services/mamba_data_service.dart';
-import '../../data/demo_host_catalog.dart';
+import '../../../../core/services/mapo_data_service.dart';
 
 class HostSearchPage extends StatefulWidget {
   const HostSearchPage({super.key});
@@ -17,13 +16,28 @@ class _HostSearchPageState extends State<HostSearchPage> {
   final _controller = TextEditingController();
   String _query = '';
   List<Map<String, dynamic>> _hosts = [];
+  bool _loading = true;
+  bool _failed = false;
 
   @override
   void initState() {
     super.initState();
-    MambaDataService.fetchHosts().then((hosts) {
-      if (mounted) setState(() => _hosts = hosts);
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _failed = false;
     });
+    try {
+      final hosts = await MapoDataService.fetchHosts();
+      if (mounted) setState(() => _hosts = hosts);
+    } catch (_) {
+      if (mounted) setState(() => _failed = true);
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
   }
 
   @override
@@ -35,9 +49,7 @@ class _HostSearchPageState extends State<HostSearchPage> {
   @override
   Widget build(BuildContext context) {
     final query = _query.trim().replaceFirst(RegExp(r'^@'), '').toLowerCase();
-    final hosts = _hosts.isEmpty
-        ? DemoHostCatalog.hosts.map((host) => Map<String, dynamic>.from(host)).toList()
-        : _hosts;
+    final hosts = _hosts;
     final results = hosts.where((host) {
       return query.isEmpty ||
           host['handle']!.toLowerCase().contains(query) ||
@@ -79,7 +91,16 @@ class _HostSearchPageState extends State<HostSearchPage> {
               ),
             ),
             Expanded(
-              child: results.isEmpty
+              child: _loading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _failed
+                  ? Center(
+                      child: TextButton(
+                        onPressed: _load,
+                        child: const Text('No pudimos cargar. Reintentar'),
+                      ),
+                    )
+                  : results.isEmpty
                   ? const Center(
                       child: Text(
                         'No encontramos anfitriones con esa búsqueda.',
@@ -102,7 +123,7 @@ class _HostSearchPageState extends State<HostSearchPage> {
                               child: Row(
                                 children: [
                                   ClipOval(
-                                    child: CachedNetworkImage(
+                                    child: MapoNetworkImage(
                                       imageUrl: host['avatar']!,
                                       width: 56,
                                       height: 56,

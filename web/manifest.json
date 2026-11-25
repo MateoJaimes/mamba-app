@@ -1,11 +1,11 @@
 {
-    "name": "mamba_app",
-    "short_name": "mamba_app",
+    "name": "MAPO",
+    "short_name": "MAPO",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#0E1B34",
+    "theme_color": "#0E1B34",
+    "description": "Descubre experiencias y conecta con anfitriones locales.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

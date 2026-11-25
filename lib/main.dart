@@ -27,7 +27,7 @@ Future<void> main() async {
 
   runApp(
     ProviderScope(
-      child: MambaApp(
+      child: MapoApp(
         authConfigured: authConfigured,
         // Development can still preview the current prototype before Supabase
         // is configured. Release builds fail closed behind the setup screen.

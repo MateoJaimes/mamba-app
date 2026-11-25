@@ -1,14 +1,24 @@
+import 'package:flutter/rendering.dart' show ScrollCacheExtent;
+import '../../../../shared/widgets/mapo_network_image.dart';
+import '../../../../core/services/plan_categories.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../core/widgets/scroll_edge_blur.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/services/mamba_data_service.dart';
+import '../../../../core/services/mapo_data_service.dart';
+import '../../../../shared/widgets/mapo_logo.dart';
 import '../feed_home_tab_request.dart';
 import '../widgets/experience_feed_card.dart';
 
 class FeedPage extends StatefulWidget {
-  const FeedPage({super.key});
+  const FeedPage({super.key, this.loader, this.cardBuilder});
+  final Future<List<Map<String, dynamic>>> Function(
+    int offset,
+    int limit,
+    String category,
+  )?
+  loader;
+  final Widget Function(BuildContext, Map<String, dynamic>)? cardBuilder;
 
   @override
   State<FeedPage> createState() => _FeedPageState();
@@ -23,6 +33,7 @@ class _FeedPageState extends State<FeedPage> {
 
   bool _isLoading = false;
   bool _hasMore = true;
+  bool _loadFailed = false;
 
   int _currentPage = 0;
   int _loadGeneration = 0;
@@ -33,6 +44,17 @@ class _FeedPageState extends State<FeedPage> {
     ('Aventura', Icons.landscape_rounded),
     ('Cultura', Icons.palette_rounded),
     ('Gastronomía', Icons.local_cafe_rounded),
+    ('Naturaleza', Icons.park_outlined),
+    ('Bienestar', Icons.spa_outlined),
+    ('Deporte', Icons.sports_soccer),
+    ('Arte', Icons.brush_outlined),
+    ('Música', Icons.music_note_outlined),
+    ('Nocturno', Icons.nightlife),
+    ('Familia', Icons.family_restroom),
+    ('Talleres', Icons.handyman_outlined),
+    ('Rural', Icons.cottage_outlined),
+    ('Historia', Icons.account_balance),
+    ('Otro', Icons.more_horiz),
   ];
 
   @override
@@ -46,8 +68,7 @@ class _FeedPageState extends State<FeedPage> {
   }
 
   Future<void> _onHomeTabSelected() async {
-    if (_scrollController.hasClients &&
-        _scrollController.position.pixels > 0) {
+    if (_scrollController.hasClients && _scrollController.position.pixels > 0) {
       await _scrollController.animateTo(
         0,
         duration: const Duration(milliseconds: 480),
@@ -74,7 +95,7 @@ class _FeedPageState extends State<FeedPage> {
 
     final position = _scrollController.position;
 
-    const threshold = 600.0;
+    const threshold = 1400.0;
 
     if (position.pixels >= position.maxScrollExtent - threshold) {
       _loadNextPage();
@@ -88,6 +109,7 @@ class _FeedPageState extends State<FeedPage> {
 
     setState(() {
       _isLoading = true;
+      _loadFailed = false;
     });
     final generation = _loadGeneration;
 
@@ -110,6 +132,23 @@ class _FeedPageState extends State<FeedPage> {
           _hasMore = false;
         }
       });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        for (final item in newExperiences.take(3)) {
+          final images = List<String>.from(item['images'] as List? ?? []);
+          if (images.isNotEmpty && images.first.isNotEmpty) {
+            precacheImage(
+              ResizeImage(mapoImageProvider(images.first), width: 900),
+              context,
+              onError: (_, _) {},
+            );
+          }
+        }
+      });
+    } catch (_) {
+      if (mounted && generation == _loadGeneration) {
+        setState(() => _loadFailed = true);
+      }
     } finally {
       if (mounted && generation == _loadGeneration) {
         setState(() {
@@ -123,126 +162,111 @@ class _FeedPageState extends State<FeedPage> {
     required int page,
     required int limit,
   }) async {
-    return MambaDataService.fetchExperiences(offset: page * limit, limit: limit);
+    if (widget.loader != null) {
+      return widget.loader!(page * limit, limit, _selectedCategory);
+    }
+    return MapoDataService.fetchExperiences(
+      offset: page * limit,
+      limit: limit,
+      category: _selectedCategory,
+    );
+  }
+
+  void _selectCategory(String value) {
+    setState(() => _selectedCategory = value);
+    _refreshFeed();
   }
 
   @override
-  Widget build(BuildContext context) {
-    final visibleExperiences = _selectedCategory == 'Todos'
-        ? _experiences
-        : _experiences
-              .where(
-                (experience) => experience['category'] == _selectedCategory,
-              )
-              .toList();
-
-    return Scaffold(
-      body: ScrollEdgeBlur(
+  Widget build(BuildContext context) => Scaffold(
+    body: RefreshIndicator(
+      onRefresh: _refreshFeed,
+      child: ListView.builder(
+        key: const PageStorageKey('experience-feed'),
         controller: _scrollController,
-        bottomExtent: 140,
-        child: RefreshIndicator(
-          onRefresh: _refreshFeed,
-          child: CustomScrollView(
-            controller: _scrollController,
-            physics: const AlwaysScrollableScrollPhysics(),
-            slivers: [
-              SliverToBoxAdapter(child: const _FeedHeader()),
-              SliverToBoxAdapter(
-                child: SizedBox(
-                  height: 55,
-                  child: ListView.separated(
-                    padding: const EdgeInsets.symmetric(horizontal: 18),
-                    scrollDirection: Axis.horizontal,
-                    itemCount: _categories.length,
-                    separatorBuilder: (_, _) => const SizedBox(width: 8),
-                    itemBuilder: (context, index) {
-                      final category = _categories[index];
-                      final selected = _selectedCategory == category.$1;
-                      return ChoiceChip(
-                        selected: selected,
-                        showCheckmark: false,
-                        avatar: Icon(category.$2, size: 17),
-                        label: Text(category.$1),
-                        onSelected: (_) =>
-                            setState(() => _selectedCategory = category.$1),
-                        backgroundColor: AppColors.surface,
-                        selectedColor: AppColors.primary.withValues(alpha: .22),
-                        side: BorderSide(
-                          color: selected
-                              ? AppColors.primary.withValues(alpha: .65)
-                              : AppColors.border,
-                        ),
-                        labelStyle: TextStyle(
-                          color: selected
-                              ? AppColors.primary
-                              : AppColors.textSecondary,
-                          fontWeight: selected
-                              ? FontWeight.w800
-                              : FontWeight.w600,
-                        ),
-                      );
-                    },
-                  ),
-                ),
+        physics: const AlwaysScrollableScrollPhysics(),
+        scrollCacheExtent: const ScrollCacheExtent.pixels(1400),
+        addRepaintBoundaries: false,
+        padding: const EdgeInsets.only(bottom: 130),
+        itemCount: _experiences.length + 3,
+        itemBuilder: (context, index) {
+          if (index == 0) return const _FeedHeader();
+          if (index == 1) {
+            return SizedBox(
+              height: 55,
+              child: ListView.separated(
+                padding: const EdgeInsets.symmetric(horizontal: 18),
+                scrollDirection: Axis.horizontal,
+                itemCount: _categories.length,
+                separatorBuilder: (_, _) => const SizedBox(width: 8),
+                itemBuilder: (context, i) {
+                  final category = _categories[i];
+                  return ChoiceChip(
+                    label: Text(
+                      PlanCategories.labels[category.$1] ?? category.$1,
+                    ),
+                    avatar: Icon(category.$2, size: 17),
+                    selected: _selectedCategory == category.$1,
+                    showCheckmark: false,
+                    onSelected: (_) => _selectCategory(category.$1),
+                  );
+                },
               ),
-              if (_experiences.isEmpty && _isLoading)
-                const SliverFillRemaining(
-                  child: Center(child: CircularProgressIndicator()),
-                )
-              else if (visibleExperiences.isEmpty)
-                SliverFillRemaining(
-                  hasScrollBody: false,
-                  child: Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(32),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.travel_explore_rounded,
-                            size: 46,
-                            color: AppColors.primary,
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            'Todavía no hay planes de esta categoría.',
-                            textAlign: TextAlign.center,
-                            style: Theme.of(context).textTheme.titleMedium,
-                          ),
-                          TextButton(
-                            onPressed: () =>
-                                setState(() => _selectedCategory = 'Todos'),
-                            child: const Text('Ver todos los planes'),
-                          ),
-                        ],
-                      ),
-                    ),
+            );
+          }
+          final planIndex = index - 2;
+          if (planIndex < _experiences.length) {
+            final plan = _experiences[planIndex];
+            return Padding(
+              key: ValueKey(plan['id']),
+              padding: const EdgeInsets.only(top: 20),
+              child:
+                  widget.cardBuilder?.call(context, plan) ??
+                  ExperienceFeedCard(experience: plan),
+            );
+          }
+          if (_isLoading) {
+            return const Padding(
+              padding: EdgeInsets.all(36),
+              child: Center(child: CircularProgressIndicator()),
+            );
+          }
+          if (_loadFailed) {
+            return Padding(
+              padding: const EdgeInsets.all(28),
+              child: Column(
+                children: [
+                  const Text('No pudimos cargar los planes.'),
+                  TextButton(
+                    onPressed: _loadNextPage,
+                    child: const Text('Reintentar'),
                   ),
-                )
-              else
-                SliverPadding(
-                  padding: const EdgeInsets.only(bottom: 120),
-                  sliver: SliverList.separated(
-                    itemCount: visibleExperiences.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: 24),
-                    itemBuilder: (context, index) => ExperienceFeedCard(
-                      experience: visibleExperiences[index],
-                    ),
-                  ),
-                ),
-              if (_isLoading && _experiences.isNotEmpty)
-                const SliverToBoxAdapter(
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(vertical: 24),
-                    child: Center(child: CircularProgressIndicator()),
-                  ),
-                ),
-            ],
-          ),
-        ),
+                ],
+              ),
+            );
+          }
+          if (_experiences.isEmpty) {
+            return const Padding(
+              padding: EdgeInsets.all(32),
+              child: Text(
+                'Todavía no hay planes de esta categoría.',
+                textAlign: TextAlign.center,
+              ),
+            );
+          }
+          if (_hasMore) {
+            return Center(
+              child: TextButton(
+                onPressed: _loadNextPage,
+                child: const Text('Cargar más planes'),
+              ),
+            );
+          }
+          return const SizedBox(height: 20);
+        },
       ),
-    );
-  }
+    ),
+  );
 
   Future<void> _refreshFeed() async {
     _loadGeneration++;
@@ -262,7 +286,6 @@ class _FeedHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 18),
       child: Column(
@@ -271,18 +294,7 @@ class _FeedHeader extends StatelessWidget {
           Row(
             children: [
               const SizedBox(width: 48),
-              Expanded(
-                child: Center(
-                  child: Text(
-                    'MAMBA',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      color: AppColors.primary,
-                      letterSpacing: 3.2,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                ),
-              ),
+              Expanded(child: Center(child: const MapoLogo(width: 70))),
               IconButton(
                 tooltip: 'Notificaciones',
                 onPressed: () => context.push('/notifications'),
@@ -295,5 +307,4 @@ class _FeedHeader extends StatelessWidget {
       ),
     );
   }
-
 }

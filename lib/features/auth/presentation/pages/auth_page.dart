@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../core/services/auth_service.dart';
+import '../../../../shared/widgets/mapo_logo.dart';
 import '../../../../core/auth/account_access.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_radius.dart';
@@ -150,6 +151,40 @@ class _AuthPageState extends State<AuthPage> {
     }
   }
 
+  Future<void> _resendConfirmation() async {
+    final validationError = _validateEmail(_emailController.text);
+    if (validationError != null) {
+      setState(() => _error = validationError);
+      return;
+    }
+    setState(() {
+      _isSubmitting = true;
+      _notice = null;
+      _error = null;
+    });
+    try {
+      await AuthService(
+        Supabase.instance.client,
+      ).resendConfirmation(_emailController.text);
+      if (mounted) {
+        setState(
+          () => _notice =
+              'Si tu cuenta está pendiente de confirmar, '
+              'recibirás un correo nuevo. Abre solo el enlace más reciente, '
+              'desde este celular. Si ya confirmaste, inicia sesión.',
+        );
+      }
+    } on AuthException catch (exception) {
+      if (mounted) setState(() => _error = _friendlyAuthError(exception));
+    } catch (_) {
+      if (mounted) {
+        setState(() => _error = 'No fue posible conectar. Inténtalo de nuevo.');
+      }
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
+  }
+
   String _friendlyAuthError(AuthException exception) {
     return switch (exception.code) {
       'invalid_credentials' => 'Correo o contraseña incorrectos.',
@@ -200,7 +235,8 @@ class _AuthPageState extends State<AuthPage> {
     final today = DateTime.now();
     final selected = await showDatePicker(
       context: context,
-      initialDate: _birthDate ?? DateTime(today.year - 25, today.month, today.day),
+      initialDate:
+          _birthDate ?? DateTime(today.year - 25, today.month, today.day),
       firstDate: DateTime(today.year - 120),
       lastDate: today,
       helpText: 'Selecciona tu fecha de nacimiento',
@@ -244,9 +280,9 @@ class _AuthPageState extends State<AuthPage> {
                       Text(
                         widget.authConfigured
                             ? (_isRegistering
-                                  ? 'Únete a MAMBA'
+                                  ? 'Únete a MAPO'
                                   : 'Qué bueno verte')
-                            : 'Estamos preparando MAMBA',
+                            : 'Estamos preparando MAPO',
                         textAlign: TextAlign.center,
                         style: theme.textTheme.headlineSmall?.copyWith(
                           fontSize: 28,
@@ -342,19 +378,33 @@ class _AuthPageState extends State<AuthPage> {
             ),
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(
+              isExpanded: true,
               initialValue: _documentType,
               decoration: const InputDecoration(
                 labelText: 'Tipo de documento',
                 prefixIcon: Icon(Icons.badge_outlined),
               ),
               items: const [
-                DropdownMenuItem(value: 'cc', child: Text('Cédula de ciudadanía')),
-                DropdownMenuItem(value: 'ce', child: Text('Cédula de extranjería')),
-                DropdownMenuItem(value: 'ti', child: Text('Tarjeta de identidad')),
-                DropdownMenuItem(value: 'ppt', child: Text('Permiso por Protección Temporal')),
+                DropdownMenuItem(
+                  value: 'cc',
+                  child: Text('Cédula de ciudadanía'),
+                ),
+                DropdownMenuItem(
+                  value: 'ce',
+                  child: Text('Cédula de extranjería'),
+                ),
+                DropdownMenuItem(
+                  value: 'ti',
+                  child: Text('Tarjeta de identidad'),
+                ),
+                DropdownMenuItem(
+                  value: 'ppt',
+                  child: Text('Permiso por Protección Temporal'),
+                ),
                 DropdownMenuItem(value: 'passport', child: Text('Pasaporte')),
               ],
-              onChanged: (value) => setState(() => _documentType = value ?? 'cc'),
+              onChanged: (value) =>
+                  setState(() => _documentType = value ?? 'cc'),
             ),
             const SizedBox(height: 16),
             _AuthTextField(
@@ -374,7 +424,9 @@ class _AuthPageState extends State<AuthPage> {
               icon: Icons.calendar_month_outlined,
               readOnly: true,
               onTap: _pickBirthDate,
-              validator: (_) => _birthDate == null ? 'Selecciona tu fecha de nacimiento.' : null,
+              validator: (_) => _birthDate == null
+                  ? 'Selecciona tu fecha de nacimiento.'
+                  : null,
               textInputAction: TextInputAction.next,
             ),
             const SizedBox(height: 16),
@@ -402,12 +454,12 @@ class _AuthPageState extends State<AuthPage> {
                 ButtonSegment(
                   value: AccountIntent.tourist,
                   icon: Icon(Icons.explore_outlined),
-                  label: Text('Explorar'),
+                  label: Text('Turista'),
                 ),
                 ButtonSegment(
                   value: AccountIntent.experienceHost,
                   icon: Icon(Icons.storefront_outlined),
-                  label: Text('Ofrecer planes'),
+                  label: Text('Anfitrión'),
                 ),
               ],
               selected: {_accountIntent},
@@ -417,8 +469,9 @@ class _AuthPageState extends State<AuthPage> {
             if (_accountIntent == AccountIntent.experienceHost) ...[
               const SizedBox(height: 8),
               Text(
-                'Tu cuenta seguirá siendo de turista. Esto solo indica tu interés; '
-                'no habilita publicaciones ni sustituye la verificación de anfitrión.',
+                'Después de confirmar tu correo, completa tu solicitud en Perfil → '
+                'Quiero ser anfitrión. Podrás publicar cuando MAPO la apruebe; '
+                'mientras tanto, puedes explorar como turista.',
                 style: theme.textTheme.bodySmall,
               ),
             ],
@@ -503,13 +556,19 @@ class _AuthPageState extends State<AuthPage> {
             ),
           ),
           const SizedBox(height: 18),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+          if (!_isRegistering)
+            TextButton(
+              onPressed: _isSubmitting ? null : _resendConfirmation,
+              child: const Text('Reenviar confirmación de correo'),
+            ),
+          Wrap(
+            alignment: WrapAlignment.center,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               Text(
                 _isRegistering
                     ? '¿Ya tienes cuenta?'
-                    : '¿Primera vez en MAMBA?',
+                    : '¿Primera vez en MAPO?',
                 style: theme.textTheme.bodyMedium,
               ),
               TextButton(
@@ -611,27 +670,12 @@ class _BrandMark extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Container(
-          width: 62,
-          height: 62,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(21),
-            color: const Color(0x2234D399),
-            border: Border.all(color: const Color(0x5534D399)),
-          ),
-          child: const Icon(
-            Icons.explore_rounded,
-            color: AppColors.primary,
-            size: 31,
-          ),
-        ),
-        const SizedBox(height: 13),
+        const MapoLogo(width: 164),
+        const SizedBox(height: 6),
         Text(
-          'MAMBA',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            letterSpacing: 4,
-            fontWeight: FontWeight.w800,
-          ),
+          'Tu mapa de experiencias',
+          textAlign: TextAlign.center,
+          style: Theme.of(context).textTheme.bodySmall,
         ),
       ],
     );

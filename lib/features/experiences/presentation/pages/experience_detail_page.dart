@@ -1,4 +1,8 @@
-import 'package:cached_network_image/cached_network_image.dart';
+import '../../../../core/services/plan_categories.dart';
+import '../../../../shared/widgets/money_text.dart';
+import '../../../../core/services/currency_service.dart';
+import '../../../../core/services/account_service.dart';
+import '../../../../shared/widgets/mapo_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:go_router/go_router.dart';
@@ -8,7 +12,7 @@ import '../../../../core/widgets/scroll_edge_blur.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../bookings/data/local_booking_store.dart';
 import '../../../hosts/data/demo_host_catalog.dart';
-import '../../../../core/services/mamba_data_service.dart';
+import '../../../../core/services/mapo_data_service.dart';
 import '../../../reviews/domain/colombian_rating.dart';
 import '../../../reviews/presentation/widgets/colombian_rating_badge.dart';
 
@@ -29,7 +33,7 @@ class _ExperienceDetailPageState extends State<ExperienceDetailPage> {
   @override
   void initState() {
     super.initState();
-    _experienceFuture = MambaDataService.fetchExperience(widget.experienceId);
+    _experienceFuture = MapoDataService.fetchExperience(widget.experienceId);
   }
 
   @override
@@ -37,7 +41,7 @@ class _ExperienceDetailPageState extends State<ExperienceDetailPage> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.experienceId != widget.experienceId) {
       _imageIndex = 0;
-      _experienceFuture = MambaDataService.fetchExperience(widget.experienceId);
+      _experienceFuture = MapoDataService.fetchExperience(widget.experienceId);
     }
   }
 
@@ -53,12 +57,35 @@ class _ExperienceDetailPageState extends State<ExperienceDetailPage> {
       future: _experienceFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
-          return const Scaffold(body: Center(child: CircularProgressIndicator()));
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+        if (snapshot.hasError) {
+          return Scaffold(
+            appBar: AppBar(),
+            body: Center(
+              child: TextButton(
+                onPressed: () => setState(
+                  () => _experienceFuture = MapoDataService.fetchExperience(
+                    widget.experienceId,
+                  ),
+                ),
+                child: const Text('No pudimos cargar el plan. Reintentar'),
+              ),
+            ),
+          );
         }
         final experience = snapshot.data;
         if (experience == null) {
           return Scaffold(
-            appBar: AppBar(leading: IconButton(tooltip: 'Cerrar', onPressed: () => _close(context), icon: const Icon(Icons.close_rounded))),
+            appBar: AppBar(
+              leading: IconButton(
+                tooltip: 'Cerrar',
+                onPressed: () => _close(context),
+                icon: const Icon(Icons.close_rounded),
+              ),
+            ),
             body: const Center(child: Text('No encontramos este plan.')),
           );
         }
@@ -67,10 +94,15 @@ class _ExperienceDetailPageState extends State<ExperienceDetailPage> {
     );
   }
 
-  Widget _buildExperience(BuildContext context, Map<String, dynamic> experience) {
+  Widget _buildExperience(
+    BuildContext context,
+    Map<String, dynamic> experience,
+  ) {
     final images = experience['images'] as List<String>;
     final providerId = experience['provider_id'] as String;
-    final host = experience['host_profile'] as Map<String, dynamic>? ?? DemoHostCatalog.hostById(providerId);
+    final host =
+        experience['host_profile'] as Map<String, dynamic>? ??
+        DemoHostCatalog.hostById(providerId);
     final theme = Theme.of(context);
     return Scaffold(
       body: Stack(
@@ -82,237 +114,252 @@ class _ExperienceDetailPageState extends State<ExperienceDetailPage> {
             child: CustomScrollView(
               controller: _scrollController,
               slivers: [
-            SliverAppBar(
-              expandedHeight: 340,
-              pinned: true,
-              backgroundColor: Colors.transparent,
-              surfaceTintColor: Colors.transparent,
-              scrolledUnderElevation: 0,
-              leading: const SizedBox.shrink(),
-              leadingWidth: 56,
-              flexibleSpace: FlexibleSpaceBar(
-                background: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    PageView.builder(
-                      itemCount: images.length,
-                      onPageChanged: (index) =>
-                          setState(() => _imageIndex = index),
-                      itemBuilder: (context, index) => CachedNetworkImage(
-                        imageUrl: images[index],
-                        fit: BoxFit.cover,
-                        errorWidget: (_, _, _) => const ColoredBox(
-                          color: AppColors.surfaceRaised,
-                          child: Icon(Icons.landscape_outlined, size: 52),
+                SliverAppBar(
+                  expandedHeight: 340,
+                  pinned: true,
+                  backgroundColor: Colors.transparent,
+                  surfaceTintColor: Colors.transparent,
+                  scrolledUnderElevation: 0,
+                  leading: const SizedBox.shrink(),
+                  leadingWidth: 56,
+                  flexibleSpace: FlexibleSpaceBar(
+                    background: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        PageView.builder(
+                          itemCount: images.length,
+                          onPageChanged: (index) =>
+                              setState(() => _imageIndex = index),
+                          itemBuilder: (context, index) => MapoNetworkImage(
+                            imageUrl: images[index],
+                            fit: BoxFit.cover,
+                            errorWidget: (_, _, _) => const ColoredBox(
+                              color: AppColors.surfaceRaised,
+                              child: Icon(Icons.landscape_outlined, size: 52),
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
-                    const DecoratedBox(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            Color(0x55000000),
-                            Colors.transparent,
-                            Color(0x99000000),
-                          ],
-                        ),
-                      ),
-                    ),
-                    if (images.length > 1)
-                      Positioned(
-                        bottom: 18,
-                        left: 0,
-                        right: 0,
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: List.generate(
-                            images.length,
-                            (index) => AnimatedContainer(
-                              duration: const Duration(milliseconds: 180),
-                              margin: const EdgeInsets.symmetric(horizontal: 3),
-                              width: index == _imageIndex ? 18 : 6,
-                              height: 6,
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(
-                                  alpha: index == _imageIndex ? 1 : .58,
-                                ),
-                                borderRadius: BorderRadius.circular(10),
+                        const IgnorePointer(
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [
+                                  Color(0x55000000),
+                                  Colors.transparent,
+                                  Color(0x99000000),
+                                ],
                               ),
                             ),
                           ),
                         ),
-                      ),
-                    Positioned(
-                      left: 18,
-                      bottom: images.length > 1 ? 42 : 18,
-                      child: ColombianRatingBadge(
-                        label:
-                            experience['experience_rating'] as String? ??
-                            ColombianRating.unaChimba.label,
-                        target: ColombianRatingTarget.experience,
-                        prominent: true,
-                        overImage: true,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 124),
-              sliver: SliverList.list(
-                children: [
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      _InfoChip(
-                        icon: Icons.location_on_outlined,
-                        label: experience['location'] as String,
-                      ),
-                      _InfoChip(
-                        icon: Icons.schedule_rounded,
-                        label: experience['duration'] as String? ?? '3 horas',
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-                  Text(
-                    experience['title'] as String,
-                    style: theme.textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  const SizedBox(height: 22),
-                  if (host != null)
-                    Material(
-                      color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(22),
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(22),
-                        onTap: () => context.push('/host/$providerId'),
-                        child: Padding(
-                          padding: const EdgeInsets.all(13),
-                          child: Row(
-                            children: [
-                              ClipOval(
-                                child: CachedNetworkImage(
-                                  imageUrl: (host['avatar'] as String?) ?? '',
-                                  width: 50,
-                                  height: 50,
-                                  fit: BoxFit.cover,
-                                  errorWidget: (_, _, _) => const CircleAvatar(
-                                    child: Icon(Icons.person_outline),
+                        if (images.length > 1)
+                          Positioned(
+                            bottom: 18,
+                            left: 0,
+                            right: 0,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: List.generate(
+                                images.length,
+                                (index) => AnimatedContainer(
+                                  duration: const Duration(milliseconds: 180),
+                                  margin: const EdgeInsets.symmetric(
+                                    horizontal: 3,
+                                  ),
+                                  width: index == _imageIndex ? 18 : 6,
+                                  height: 6,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(
+                                      alpha: index == _imageIndex ? 1 : .58,
+                                    ),
+                                    borderRadius: BorderRadius.circular(10),
                                   ),
                                 ),
                               ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Una experiencia de',
-                                      style: theme.textTheme.bodySmall,
-                                    ),
-                                    Text(
-                                      (host['name'] as String?) ?? 'Anfitrión MAMBA',
-                                      style: theme.textTheme.titleSmall
-                                          ?.copyWith(
-                                            fontWeight: FontWeight.w800,
-                                          ),
-                                    ),
-                                    Text(
-                                      (host['handle'] as String?) ?? '',
-                                      style: theme.textTheme.bodySmall,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const Icon(Icons.chevron_right_rounded),
-                            ],
+                            ),
                           ),
-                        ),
-                      ),
-                    ),
-                  const SizedBox(height: 24),
-                  _SectionTitle(title: 'Sobre este plan'),
-                  const SizedBox(height: 8),
-                  Text(
-                    experience['description'] as String,
-                    style: theme.textTheme.bodyLarge?.copyWith(height: 1.5),
-                  ),
-                  const SizedBox(height: 24),
-                  _SectionTitle(title: 'Lo que vivirás'),
-                  const SizedBox(height: 10),
-                  _DetailLine(
-                    icon: Icons.groups_2_outlined,
-                    text:
-                        'Grupo pequeño · hasta ${experience['max_people'] ?? 10} personas',
-                  ),
-                  const SizedBox(height: 18),
-                  _SectionTitle(title: 'Punto de encuentro'),
-                  const SizedBox(height: 8),
-                  Text(
-                    experience['meeting_point'] as String? ??
-                        experience['location'] as String,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  _MeetingPointMap(experience: experience),
-                  const SizedBox(height: 6),
-                  Text(
-                    'El marcador muestra la ubicación de referencia del plan.',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                  _DetailLine(
-                    icon: Icons.check_circle_outline_rounded,
-                    text:
-                        experience['includes'] as String? ??
-                        'Acompañamiento de anfitrión local',
-                  ),
-                  _DetailLine(
-                    icon: Icons.info_outline_rounded,
-                    text:
-                        experience['requirements'] as String? ??
-                        'Llega 10 minutos antes y trae ropa cómoda.',
-                  ),
-                  const SizedBox(height: 14),
-                  _AgePolicyCard(experience: experience),
-                  const SizedBox(height: 20),
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: AppColors.border),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.payments_outlined,
-                          color: AppColors.primary,
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            'El pago aún no está habilitado. Tu inscripción local no realiza ningún cobro.',
-                            style: theme.textTheme.bodySmall,
+                        Positioned(
+                          left: 18,
+                          bottom: images.length > 1 ? 42 : 18,
+                          child: ColombianRatingBadge(
+                            label:
+                                experience['experience_rating'] as String? ??
+                                ColombianRating.unaChimba.label,
+                            target: ColombianRatingTarget.experience,
+                            prominent: true,
+                            overImage: true,
                           ),
                         ),
                       ],
                     ),
                   ),
-                ],
-              ),
-            ),
+                ),
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 124),
+                  sliver: SliverList.list(
+                    children: [
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          for (final category in PlanCategories.of(experience))
+                            _InfoChip(
+                              icon: Icons.tag,
+                              label:
+                                  PlanCategories.labels[category] ?? category,
+                            ),
+                          _InfoChip(
+                            icon: Icons.location_on_outlined,
+                            label: experience['location'] as String,
+                          ),
+                          _InfoChip(
+                            icon: Icons.schedule_rounded,
+                            label:
+                                experience['duration'] as String? ?? '3 horas',
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      Text(
+                        experience['title'] as String,
+                        style: theme.textTheme.headlineSmall?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      const SizedBox(height: 22),
+                      if (host != null)
+                        Material(
+                          color: AppColors.surface,
+                          borderRadius: BorderRadius.circular(22),
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(22),
+                            onTap: () => context.push('/host/$providerId'),
+                            child: Padding(
+                              padding: const EdgeInsets.all(13),
+                              child: Row(
+                                children: [
+                                  ClipOval(
+                                    child: MapoNetworkImage(
+                                      imageUrl:
+                                          (host['avatar'] as String?) ?? '',
+                                      width: 50,
+                                      height: 50,
+                                      fit: BoxFit.cover,
+                                      errorWidget: (_, _, _) =>
+                                          const CircleAvatar(
+                                            child: Icon(Icons.person_outline),
+                                          ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Una experiencia de',
+                                          style: theme.textTheme.bodySmall,
+                                        ),
+                                        Text(
+                                          (host['name'] as String?) ??
+                                              'Anfitrión MAPO',
+                                          style: theme.textTheme.titleSmall
+                                              ?.copyWith(
+                                                fontWeight: FontWeight.w800,
+                                              ),
+                                        ),
+                                        Text(
+                                          (host['handle'] as String?) ?? '',
+                                          style: theme.textTheme.bodySmall,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const Icon(Icons.chevron_right_rounded),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      const SizedBox(height: 24),
+                      _SectionTitle(title: 'Sobre este plan'),
+                      const SizedBox(height: 8),
+                      Text(
+                        experience['description'] as String,
+                        style: theme.textTheme.bodyLarge?.copyWith(height: 1.5),
+                      ),
+                      const SizedBox(height: 24),
+                      _SectionTitle(title: 'Lo que vivirás'),
+                      const SizedBox(height: 10),
+                      _DetailLine(
+                        icon: Icons.groups_2_outlined,
+                        text:
+                            'Grupo pequeño · hasta ${experience['max_people'] ?? 10} personas',
+                      ),
+                      const SizedBox(height: 18),
+                      _SectionTitle(title: 'Punto de encuentro'),
+                      const SizedBox(height: 8),
+                      Text(
+                        experience['meeting_point'] as String? ??
+                            experience['location'] as String,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      _MeetingPointMap(experience: experience),
+                      const SizedBox(height: 6),
+                      Text(
+                        'El marcador muestra la ubicación de referencia del plan.',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      _DetailLine(
+                        icon: Icons.check_circle_outline_rounded,
+                        text:
+                            experience['includes'] as String? ??
+                            'Acompañamiento de anfitrión local',
+                      ),
+                      _DetailLine(
+                        icon: Icons.info_outline_rounded,
+                        text:
+                            experience['requirements'] as String? ??
+                            'Llega 10 minutos antes y trae ropa cómoda.',
+                      ),
+                      const SizedBox(height: 14),
+                      _AgePolicyCard(experience: experience),
+                      const SizedBox(height: 20),
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: AppColors.surface,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: AppColors.border),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.payments_outlined,
+                              color: AppColors.primary,
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                'Tu inscripción se confirma al apuntarte, según los cupos disponibles. Paga presencialmente al anfitrión; MAPO no realiza cobros.',
+                                style: theme.textTheme.bodySmall,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),
@@ -351,8 +398,8 @@ class _ExperienceDetailPageState extends State<ExperienceDetailPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text('Por persona', style: theme.textTheme.bodySmall),
-                    Text(
-                      experience['price'] as String,
+                    MoneyText(
+                      amount: CurrencyService.amount(experience),
                       style: theme.textTheme.titleLarge?.copyWith(
                         color: AppColors.primary,
                         fontWeight: FontWeight.w900,
@@ -390,11 +437,12 @@ class _ExperienceDetailPageState extends State<ExperienceDetailPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text(
-          'Inscripción guardada en este dispositivo. Aún no es una reserva confirmada.',
+          '¡Inscripción confirmada! El pago se realiza presencialmente con el anfitrión.',
         ),
       ),
     );
   }
+
   void _close(BuildContext context) {
     if (context.canPop()) {
       context.pop();
@@ -420,6 +468,7 @@ class _JoinExperienceSheetState extends State<_JoinExperienceSheet> {
   bool _guardianConfirmed = false;
   bool _minimumAgeConfirmed = false;
   bool _saving = false;
+  String? _error;
 
   @override
   void initState() {
@@ -432,7 +481,10 @@ class _JoinExperienceSheetState extends State<_JoinExperienceSheet> {
   }
 
   Future<void> _submit() async {
-    setState(() => _saving = true);
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
     try {
       await LocalBookingStore.create(
         experience: widget.experience,
@@ -445,14 +497,12 @@ class _JoinExperienceSheetState extends State<_JoinExperienceSheet> {
             widget.experience['age_policy'] != 'minimum_age',
       );
       if (mounted) Navigator.pop(context, true);
-    } catch (_) {
+    } catch (error) {
       if (mounted) {
-        setState(() => _saving = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('No pudimos guardar la inscripción local.'),
-          ),
-        );
+        setState(() {
+          _saving = false;
+          _error = AccountService.error(error);
+        });
       }
     }
   }
@@ -591,13 +641,25 @@ class _JoinExperienceSheetState extends State<_JoinExperienceSheet> {
                 ),
               ),
             const SizedBox(height: 12),
-            Text(
-              'Total estimado: ${_totalPrice(widget.experience['price'] as String, _adults + _minors)} · No se realiza ningún pago.',
+            MoneyText(
+              amount:
+                  CurrencyService.amount(widget.experience) *
+                  (_adults + _minors),
+              prefix: 'Total estimado: ',
+              suffix: ' · Pago presencial al anfitrión.',
               style: theme.textTheme.bodyMedium?.copyWith(
                 fontWeight: FontWeight.w700,
               ),
             ),
             const SizedBox(height: 16),
+            if (_error != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Text(
+                  _error!,
+                  style: const TextStyle(color: AppColors.error),
+                ),
+              ),
             SizedBox(
               width: double.infinity,
               child: FilledButton(
@@ -607,13 +669,13 @@ class _JoinExperienceSheetState extends State<_JoinExperienceSheet> {
                         dimension: 20,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : const Text('Guardar mi inscripción'),
+                    : const Text('Confirmar mi inscripción'),
               ),
             ),
             const SizedBox(height: 8),
             Center(
               child: Text(
-                'Solicitud local de prueba, pendiente de confirmación del anfitrión.',
+                'Confirmación automática si hay cupo. Paga presencialmente al anfitrión; la app no cobra.',
                 textAlign: TextAlign.center,
                 style: theme.textTheme.bodySmall,
               ),
@@ -641,18 +703,6 @@ String _month(int month) => const [
   'nov',
   'dic',
 ][month - 1];
-
-String _totalPrice(String price, int guests) {
-  final amount = int.tryParse(price.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
-  final total = amount * guests;
-  final digits = total.toString();
-  final groups = <String>[];
-  for (var end = digits.length; end > 0; end -= 3) {
-    final start = (end - 3).clamp(0, digits.length);
-    groups.insert(0, digits.substring(start, end));
-  }
-  return '\$${groups.join('.')}';
-}
 
 class _SectionTitle extends StatelessWidget {
   const _SectionTitle({required this.title});

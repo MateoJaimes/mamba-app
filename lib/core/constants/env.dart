@@ -3,11 +3,15 @@ import 'package:flutter/foundation.dart';
 /// Public client configuration supplied at build/run time.
 /// Never put a Supabase secret or service-role key in the app.
 abstract final class AppEnvironment {
-  static const supabaseUrl = String.fromEnvironment('SUPABASE_URL');
-  static const supabasePublishableKey = String.fromEnvironment(
-    'SUPABASE_PUBLISHABLE_KEY',
+  // The APK only knows the NestJS API. Supabase credentials live on the server.
+  static const supabaseUrl = String.fromEnvironment('API_BASE_URL');
+  static const supabasePublishableKey = 'sb_publishable_mamba_frontend';
+  static const authRedirectUri =
+      'https://mapo-experiencias-api.vercel.app/auth/callback';
+  static const mapTileUrl = String.fromEnvironment(
+    'MAP_TILE_URL',
+    defaultValue: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
   );
-  static const authRedirectUri = 'mamba://auth-callback';
 
   static bool get hasSupabaseConfig {
     final uri = Uri.tryParse(supabaseUrl);

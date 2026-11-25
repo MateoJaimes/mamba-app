@@ -4,21 +4,21 @@ abstract final class AppColors {
   AppColors._();
 
   // Brand
-  static const primary = Color(0xFF34D399);
-  static const primaryDark = Color(0xFF10B981);
-  static const emeraldGlow = Color(0x5534D399);
+  static const primary = Color(0xFF59CFC4);
+  static const secondary = Color(0xFFC7B6F0);
+  static const primaryGlow = Color(0x5559CFC4);
 
   // Background
-  static const background = Color(0xFF101412);
-  static const surface = Color(0xFF191F1C);
-  static const surfaceRaised = Color(0xFF222A26);
+  static const background = Color(0xFF0E1B34);
+  static const surface = Color(0xFF162642);
+  static const surfaceRaised = Color(0xFF233654);
 
   // Text
-  static const textPrimary = Color(0xFFF2F7F4);
-  static const textSecondary = Color(0xFFA2B0A8);
+  static const textPrimary = Color(0xFFF7F6F1);
+  static const textSecondary = Color(0xFFB6C4D8);
 
   // Border
-  static const border = Color(0x33D7E5DC);
+  static const border = Color(0x33C7D5EB);
 
   // Status
   static const success = Color(0xFF22C55E);

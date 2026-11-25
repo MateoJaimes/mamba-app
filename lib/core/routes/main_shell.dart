@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../features/feed/presentation/feed_home_tab_request.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_radius.dart';
+import '../services/account_session.dart';
 
 class MainShell extends StatefulWidget {
   const MainShell({super.key, required this.navigationShell});
@@ -19,6 +20,21 @@ class MainShell extends StatefulWidget {
 
 class _MainShellState extends State<MainShell> {
   bool _isCompact = false;
+  @override
+  void initState() {
+    super.initState();
+    AccountSession.instance.addListener(_accountChanged);
+  }
+
+  void _accountChanged() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    AccountSession.instance.removeListener(_accountChanged);
+    super.dispose();
+  }
 
   static const _items = [
     (Icons.explore_outlined, Icons.explore_rounded, 'Explorar'),
@@ -59,6 +75,13 @@ class _MainShellState extends State<MainShell> {
   @override
   Widget build(BuildContext context) {
     final selected = widget.navigationShell.currentIndex;
+    final items = [
+      if (AccountSession.instance.isHost)
+        (Icons.inventory_2_outlined, Icons.inventory_2_rounded, 'Mis planes')
+      else
+        _items.first,
+      ..._items.skip(1),
+    ];
     return Scaffold(
       extendBody: true,
       body: NotificationListener<ScrollNotification>(
@@ -84,9 +107,9 @@ class _MainShellState extends State<MainShell> {
                 curve: Curves.easeInOutCubic,
                 height: _isCompact ? 52 : 68,
                 decoration: BoxDecoration(
-                  color: const Color(0xE6191F1C),
+                  color: const Color(0xE6162642),
                   borderRadius: BorderRadius.circular(AppRadius.full),
-                  border: Border.all(color: const Color(0x38D7E5DC)),
+                  border: Border.all(color: const Color(0x38C7D5EB)),
                   boxShadow: const [
                     BoxShadow(
                       color: Color(0x55000000),
@@ -94,15 +117,15 @@ class _MainShellState extends State<MainShell> {
                       offset: Offset(0, 10),
                     ),
                     BoxShadow(
-                      color: AppColors.emeraldGlow,
+                      color: AppColors.primaryGlow,
                       blurRadius: 20,
                       spreadRadius: -14,
                     ),
                   ],
                 ),
                 child: Row(
-                  children: List.generate(_items.length, (index) {
-                    final item = _items[index];
+                  children: List.generate(items.length, (index) {
+                    final item = items[index];
                     final active = selected == index;
                     return Expanded(
                       child: Semantics(
@@ -121,7 +144,7 @@ class _MainShellState extends State<MainShell> {
                             ),
                             decoration: BoxDecoration(
                               color: active
-                                  ? const Color(0x2634D399)
+                                  ? const Color(0x2659CFC4)
                                   : Colors.transparent,
                               borderRadius: BorderRadius.circular(
                                 AppRadius.full,

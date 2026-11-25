@@ -1,11 +1,13 @@
-import 'package:cached_network_image/cached_network_image.dart';
+import '../../../../shared/widgets/money_text.dart';
+import '../../../../core/services/currency_service.dart';
+import '../../../../shared/widgets/mapo_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/services/mamba_data_service.dart';
+import '../../../../core/services/mapo_data_service.dart';
 import '../../../reviews/domain/colombian_rating.dart';
 import 'experience_image_carousel.dart';
 
@@ -85,7 +87,7 @@ class _ExperienceFeedCardState extends State<ExperienceFeedCard> {
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         gradient: const LinearGradient(
-                          colors: [AppColors.primary, AppColors.primaryDark],
+                          colors: [AppColors.primary, AppColors.secondary],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ),
@@ -105,7 +107,7 @@ class _ExperienceFeedCardState extends State<ExperienceFeedCard> {
                                   .substring(0, 1)
                                   .toUpperCase(),
                         style: const TextStyle(
-                          color: Color(0xFF06251A),
+                          color: Color(0xFF0E1B34),
                           fontSize: 19,
                           fontWeight: FontWeight.w800,
                         ),
@@ -250,8 +252,8 @@ class _ExperienceFeedCardState extends State<ExperienceFeedCard> {
                       ),
                       const Spacer(),
                       Text('Desde ', style: theme.textTheme.bodyMedium),
-                      Text(
-                        widget.experience['price'],
+                      MoneyText(
+                        amount: CurrencyService.amount(widget.experience),
                         style: theme.textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.w800,
                           color: theme.colorScheme.primary,
@@ -289,12 +291,19 @@ class _ExperienceFeedCardState extends State<ExperienceFeedCard> {
     final previous = _isLiked;
     final next = !previous;
     setState(() => _isLiked = next);
-    if (MambaDataService.hasSignedInUser) {
+    if (MapoDataService.hasSignedInUser) {
       try {
-        await MambaDataService.toggleExperienceLike('${widget.experience['id']}', previous);
+        await MapoDataService.toggleExperienceLike(
+          '${widget.experience['id']}',
+          previous,
+        );
       } catch (_) {
         if (mounted) setState(() => _isLiked = previous);
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No pudimos actualizar el me gusta.')));
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('No pudimos actualizar el me gusta.')),
+          );
+        }
       }
     }
   }
@@ -303,12 +312,19 @@ class _ExperienceFeedCardState extends State<ExperienceFeedCard> {
     final previous = _isSaved;
     final next = !previous;
     setState(() => _isSaved = next);
-    if (MambaDataService.hasSignedInUser) {
+    if (MapoDataService.hasSignedInUser) {
       try {
-        await MambaDataService.toggleFavorite('${widget.experience['id']}', previous);
+        await MapoDataService.toggleFavorite(
+          '${widget.experience['id']}',
+          previous,
+        );
       } catch (_) {
         if (mounted) setState(() => _isSaved = previous);
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No pudimos guardar la publicación.')));
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('No pudimos guardar la publicación.')),
+          );
+        }
       }
     }
   }
@@ -317,7 +333,7 @@ class _ExperienceFeedCardState extends State<ExperienceFeedCard> {
     final title = widget.experience['title'] as String;
     final location = widget.experience['location'] as String;
     await SharePlus.instance.share(
-      ShareParams(text: '$title en $location. Descúbrelo en MAMBA.'),
+      ShareParams(text: '$title en $location. Descúbrelo en MAPO.'),
     );
   }
 
@@ -329,9 +345,7 @@ class _ExperienceFeedCardState extends State<ExperienceFeedCard> {
       isScrollControlled: true,
       useRootNavigator: true,
       backgroundColor: Theme.of(context).colorScheme.surface,
-      constraints: BoxConstraints(
-        maxHeight: MediaQuery.sizeOf(context).height,
-      ),
+      constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
@@ -346,14 +360,16 @@ class _ExperienceFeedCardState extends State<ExperienceFeedCard> {
             if (_comments.isEmpty) {
               _commentsLoading = true;
               final generation = ++_commentsRequestGeneration;
-              MambaDataService.fetchComments('${widget.experience['id']}').then((comments) {
-                if (generation != _commentsRequestGeneration) return;
-                _comments
-                  ..clear()
-                  ..addAll(comments);
-                _commentsLoading = false;
-                safeSetSheetState(() {});
-              });
+              MapoDataService.fetchComments('${widget.experience['id']}').then(
+                (comments) {
+                  if (generation != _commentsRequestGeneration) return;
+                  _comments
+                    ..clear()
+                    ..addAll(comments);
+                  _commentsLoading = false;
+                  safeSetSheetState(() {});
+                },
+              );
             }
           }
 
@@ -365,7 +381,8 @@ class _ExperienceFeedCardState extends State<ExperienceFeedCard> {
             child: SafeArea(
               top: true,
               child: SizedBox(
-                height: MediaQuery.sizeOf(sheetContext).height -
+                height:
+                    MediaQuery.sizeOf(sheetContext).height -
                     MediaQuery.viewInsetsOf(sheetContext).bottom,
                 child: Column(
                   children: [
@@ -395,7 +412,9 @@ class _ExperienceFeedCardState extends State<ExperienceFeedCard> {
                                   style: Theme.of(sheetContext)
                                       .textTheme
                                       .bodySmall
-                                      ?.copyWith(color: AppColors.textSecondary),
+                                      ?.copyWith(
+                                        color: AppColors.textSecondary,
+                                      ),
                                 ),
                               ],
                             ),
@@ -409,9 +428,9 @@ class _ExperienceFeedCardState extends State<ExperienceFeedCard> {
                                   ? Center(
                                       child: Text(
                                         'Sé la primera persona en comentar',
-                                        style: Theme.of(sheetContext)
-                                            .textTheme
-                                            .bodyMedium,
+                                        style: Theme.of(
+                                          sheetContext,
+                                        ).textTheme.bodyMedium,
                                       ),
                                     )
                                   : ListView.separated(
@@ -424,10 +443,10 @@ class _ExperienceFeedCardState extends State<ExperienceFeedCard> {
                                       ),
                                       itemBuilder: (context, index) =>
                                           _buildCommentRow(
-                                        context: sheetContext,
-                                        comment: _comments[index],
-                                        setSheetState: safeSetSheetState,
-                                      ),
+                                            context: sheetContext,
+                                            comment: _comments[index],
+                                            setSheetState: safeSetSheetState,
+                                          ),
                                     ),
                             ),
                             const SizedBox(height: 8),
@@ -506,7 +525,7 @@ class _ExperienceFeedCardState extends State<ExperienceFeedCard> {
         fit: StackFit.expand,
         children: [
           if (image.isNotEmpty)
-            CachedNetworkImage(
+            MapoNetworkImage(
               imageUrl: image,
               fit: BoxFit.cover,
               errorWidget: (_, _, _) => const ColoredBox(
@@ -524,7 +543,11 @@ class _ExperienceFeedCardState extends State<ExperienceFeedCard> {
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [Color(0x88000000), Colors.transparent, Color(0xD9000000)],
+                colors: [
+                  Color(0x88000000),
+                  Colors.transparent,
+                  Color(0xD9000000),
+                ],
                 stops: [0, .4, 1],
               ),
             ),
@@ -543,7 +566,7 @@ class _ExperienceFeedCardState extends State<ExperienceFeedCard> {
                         ? '?'
                         : _providerName.trim().substring(0, 1).toUpperCase(),
                     style: const TextStyle(
-                      color: Color(0xFF06251A),
+                      color: Color(0xFF0E1B34),
                       fontWeight: FontWeight.w900,
                     ),
                   ),
@@ -594,11 +617,14 @@ class _ExperienceFeedCardState extends State<ExperienceFeedCard> {
                   title,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: Theme.of(sheetContext).textTheme.headlineSmall?.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w900,
-                    shadows: const [Shadow(color: Colors.black54, blurRadius: 8)],
-                  ),
+                  style: Theme.of(sheetContext).textTheme.headlineSmall
+                      ?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w900,
+                        shadows: const [
+                          Shadow(color: Colors.black54, blurRadius: 8),
+                        ],
+                      ),
                 ),
                 const SizedBox(height: 5),
                 Text(
@@ -620,12 +646,16 @@ class _ExperienceFeedCardState extends State<ExperienceFeedCard> {
     required Map<String, dynamic> comment,
     required StateSetter setSheetState,
   }) {
-    final author = '${comment['author_name'] ?? 'Viajero MAMBA'}';
+    final author = '${comment['author_name'] ?? 'Viajero MAPO'}';
     final avatarUrl = comment['author_avatar_url'] as String?;
-    final createdAt = DateTime.tryParse('${comment['created_at'] ?? ''}')?.toLocal();
-    final date = createdAt == null ? '' : DateFormat('dd-MM-yy').format(createdAt);
-    final isOwner = MambaDataService.hasSignedInUser
-        ? comment['user_id'] == MambaDataService.currentUserId
+    final createdAt = DateTime.tryParse(
+      '${comment['created_at'] ?? ''}',
+    )?.toLocal();
+    final date = createdAt == null
+        ? ''
+        : DateFormat('dd-MM-yy').format(createdAt);
+    final isOwner = MapoDataService.hasSignedInUser
+        ? comment['user_id'] == MapoDataService.currentUserId
         : comment['user_id'] == 'preview';
 
     return Row(
@@ -636,7 +666,7 @@ class _ExperienceFeedCardState extends State<ExperienceFeedCard> {
           backgroundColor: AppColors.primary.withValues(alpha: .18),
           foregroundImage: avatarUrl == null || avatarUrl.isEmpty
               ? null
-              : CachedNetworkImageProvider(avatarUrl),
+              : mapoImageProvider(avatarUrl),
           child: Text(
             author.trim().isEmpty ? '?' : author.trim()[0].toUpperCase(),
             style: const TextStyle(
@@ -660,9 +690,8 @@ class _ExperienceFeedCardState extends State<ExperienceFeedCard> {
                           author,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                            fontWeight: FontWeight.w800,
-                          ),
+                          style: Theme.of(context).textTheme.labelLarge
+                              ?.copyWith(fontWeight: FontWeight.w800),
                         ),
                       ],
                     ),
@@ -707,9 +736,9 @@ class _ExperienceFeedCardState extends State<ExperienceFeedCard> {
               ),
               Text(
                 '${comment['body'] ?? ''}',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  height: 1.35,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(height: 1.35),
               ),
               if (date.isNotEmpty) ...[
                 const SizedBox(height: 3),
@@ -750,7 +779,8 @@ class _ExperienceFeedCardState extends State<ExperienceFeedCard> {
             child: const Text('Cancelar'),
           ),
           FilledButton(
-            onPressed: () => Navigator.pop(dialogContext, controller.text.trim()),
+            onPressed: () =>
+                Navigator.pop(dialogContext, controller.text.trim()),
             child: const Text('Guardar'),
           ),
         ],
@@ -765,7 +795,7 @@ class _ExperienceFeedCardState extends State<ExperienceFeedCard> {
       if (comment['user_id'] == 'preview') {
         updated = {...comment, 'body': updatedText};
       } else {
-        updated = await MambaDataService.updateComment(commentId, updatedText);
+        updated = await MapoDataService.updateComment(commentId, updatedText);
       }
       final index = _comments.indexWhere((item) => item['id'] == comment['id']);
       if (index >= 0 && mounted) {
@@ -806,10 +836,12 @@ class _ExperienceFeedCardState extends State<ExperienceFeedCard> {
 
     try {
       if (comment['user_id'] != 'preview') {
-        await MambaDataService.deleteComment('${comment['id']}');
+        await MapoDataService.deleteComment('${comment['id']}');
       }
       if (!mounted) return;
-      setState(() => _comments.removeWhere((item) => item['id'] == comment['id']));
+      setState(
+        () => _comments.removeWhere((item) => item['id'] == comment['id']),
+      );
       setSheetState(() {});
     } catch (_) {
       if (mounted) {
@@ -829,10 +861,10 @@ class _ExperienceFeedCardState extends State<ExperienceFeedCard> {
     if (comment.length > 1000) return;
     controller.clear();
 
-    if (MambaDataService.hasSignedInUser) {
+    if (MapoDataService.hasSignedInUser) {
       setSheetState(() => _commentSubmitting = true);
       try {
-        final created = await MambaDataService.addComment(
+        final created = await MapoDataService.addComment(
           '${widget.experience['id']}',
           comment,
         );
@@ -851,13 +883,15 @@ class _ExperienceFeedCardState extends State<ExperienceFeedCard> {
     }
 
     final now = DateTime.now().toIso8601String();
-    setState(() => _comments.insert(0, {
-      'id': 'preview-${DateTime.now().microsecondsSinceEpoch}',
-      'user_id': 'preview',
-      'body': comment,
-      'author_name': 'Tú',
-      'created_at': now,
-    }));
+    setState(
+      () => _comments.insert(0, {
+        'id': 'preview-${DateTime.now().microsecondsSinceEpoch}',
+        'user_id': 'preview',
+        'body': comment,
+        'author_name': 'Tú',
+        'created_at': now,
+      }),
+    );
     setSheetState(() {});
   }
 }

@@ -1,14 +1,17 @@
+import '../../../../core/services/plan_categories.dart';
+import '../../../../shared/widgets/money_text.dart';
+import '../../../../core/services/currency_service.dart';
 import 'dart:async';
 
-import 'package:cached_network_image/cached_network_image.dart';
+import '../../../../shared/widgets/mapo_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/services/mamba_data_service.dart';
-import '../../../hosts/data/demo_host_catalog.dart';
+import '../../../../core/constants/env.dart';
+import '../../../../core/services/mapo_data_service.dart';
 
 class MapPage extends StatefulWidget {
   const MapPage({super.key});
@@ -26,23 +29,70 @@ class _MapPageState extends State<MapPage> {
   String? _selectedExperienceId;
   String _selectedCategory = 'Todos';
   List<Map<String, dynamic>> _experiences = [];
+  bool _failed = false;
 
-  static const _categories = ['Todos', 'Aventura', 'Cultura', 'Gastronomía'];
+  static final _categories = ['Todos', ...PlanCategories.labels.keys];
 
   @override
   void initState() {
     super.initState();
-    MambaDataService.fetchExperiences(limit: _mapExperienceLimit).then((experiences) {
-      if (!mounted) return;
-      setState(() => _experiences = experiences.where(_hasMapCoordinates).toList());
-    });
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final experiences = await MapoDataService.fetchExperiences(
+        limit: _mapExperienceLimit,
+      );
+      if (mounted) {
+        setState(() {
+          _experiences = experiences.where(_hasMapCoordinates).toList();
+          _failed = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _failed = true);
+    }
+  }
+
+  void _centerPlans() {
+    final points = _experiences
+        .where(
+          (e) =>
+              _selectedCategory == 'Todos' ||
+              PlanCategories.of(e).contains(_selectedCategory),
+        )
+        .map(
+          (e) => LatLng(
+            (e['latitude'] as num).toDouble(),
+            (e['longitude'] as num).toDouble(),
+          ),
+        )
+        .toList();
+    _mapController.rotate(0);
+    if (points.length > 1) {
+      _mapController.fitCamera(
+        CameraFit.bounds(
+          bounds: LatLngBounds.fromPoints(points),
+          padding: const EdgeInsets.fromLTRB(90, 160, 90, 240),
+          maxZoom: 14,
+        ),
+      );
+    } else if (points.isNotEmpty) {
+      _mapController.move(points.first, 14);
+    } else {
+      _mapController.move(_medellin, 12.5);
+    }
   }
 
   bool _hasMapCoordinates(Map<String, dynamic> experience) {
     final latitude = experience['latitude'];
     final longitude = experience['longitude'];
     if (latitude is! num || longitude is! num) return false;
-    return latitude >= -90 && latitude <= 90 && longitude >= -180 && longitude <= 180;
+    return latitude >= -90 &&
+        latitude <= 90 &&
+        longitude >= -180 &&
+        longitude <= 180;
   }
 
   @override
@@ -54,12 +104,10 @@ class _MapPageState extends State<MapPage> {
 
   @override
   Widget build(BuildContext context) {
-    final allExperiences = _experiences.isEmpty
-        ? DemoHostCatalog.experiences
-        : _experiences;
+    final allExperiences = _experiences;
     final experiences = allExperiences.where((experience) {
       return _selectedCategory == 'Todos' ||
-          experience['category'] == _selectedCategory;
+          PlanCategories.of(experience).contains(_selectedCategory);
     }).toList();
     Map<String, dynamic>? selected;
     if (_selectedExperienceId != null) {
@@ -90,8 +138,7 @@ class _MapPageState extends State<MapPage> {
               ),
               children: [
                 TileLayer(
-                  urlTemplate:
-                      'https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}.png',
+                  urlTemplate: AppEnvironment.mapTileUrl,
                   userAgentPackageName: 'com.mamba.mamba_app',
                   maxNativeZoom: 16,
                   keepBuffer: 1,
@@ -101,18 +148,12 @@ class _MapPageState extends State<MapPage> {
                   markers: experiences.map((experience) {
                     final id = experience['id'] as String;
                     final isSelected = id == _selectedExperienceId;
-                    final price = (experience['price'] as String)
-                        .replaceAll(r'$', '')
-                        .replaceAll('.000', 'k');
                     final latitude = experience['latitude'] as num;
                     final longitude = experience['longitude'] as num;
                     return Marker(
-                      point: LatLng(
-                        latitude.toDouble(),
-                        longitude.toDouble(),
-                      ),
-                      width: 90,
-                      height: 48,
+                      point: LatLng(latitude.toDouble(), longitude.toDouble()),
+                      width: 160,
+                      height: 88,
                       alignment: Alignment.bottomCenter,
                       child: GestureDetector(
                         onTap: () => setState(() => _selectedExperienceId = id),
@@ -124,32 +165,50 @@ class _MapPageState extends State<MapPage> {
                           decoration: BoxDecoration(
                             color: isSelected
                                 ? AppColors.primary
-                                : const Color(0xED171F1B),
-                            borderRadius: BorderRadius.circular(99),
+                                : const Color(0xED162642),
+                            borderRadius: BorderRadius.circular(16),
                             border: Border.all(
                               color: AppColors.primary,
                               width: isSelected ? 2 : 1,
                             ),
                           ),
-                          child: Row(
+                          child: Column(
                             mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Icon(
-                                Icons.location_on_rounded,
-                                size: 15,
-                                color: isSelected
-                                    ? const Color(0xFF06251A)
-                                    : AppColors.primary,
-                              ),
-                              const SizedBox(width: 3),
                               Text(
-                                price,
+                                '${experience['title']}',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
                                   color: isSelected
-                                      ? const Color(0xFF06251A)
+                                      ? const Color(0xFF0E1B34)
                                       : AppColors.textPrimary,
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 12,
+                                ),
+                              ),
+                              Text(
+                                '${experience['experience_rating']}',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: isSelected
+                                      ? const Color(0xFF0E1B34)
+                                      : AppColors.textSecondary,
+                                ),
+                              ),
+                              MoneyText(
+                                amount: CurrencyService.amount(experience),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
                                   fontWeight: FontWeight.w900,
                                   fontSize: 12,
+                                  color: isSelected
+                                      ? const Color(0xFF0E1B34)
+                                      : AppColors.primary,
                                 ),
                               ),
                             ],
@@ -158,7 +217,7 @@ class _MapPageState extends State<MapPage> {
                       ),
                     );
                   }).toList(),
-                  ),
+                ),
               ],
             ),
           ),
@@ -199,9 +258,9 @@ class _MapPageState extends State<MapPage> {
                     ),
                     const SizedBox(width: 8),
                     _MapIconButton(
-                      tooltip: 'Volver a Medellín',
+                      tooltip: 'Centrar planes',
                       icon: Icons.my_location_rounded,
-                      onPressed: () => _mapController.move(_medellin, 12.5),
+                      onPressed: _centerPlans,
                     ),
                   ],
                 ),
@@ -221,12 +280,11 @@ class _MapPageState extends State<MapPage> {
                         showCheckmark: false,
                         onSelected: (_) => setState(() {
                           _selectedCategory = category;
-                          final categoryExperiences = allExperiences
-                              .where(
-                                (item) =>
-                                    category == 'Todos' ||
-                                    item['category'] == category,
-                              );
+                          final categoryExperiences = allExperiences.where(
+                            (item) =>
+                                category == 'Todos' ||
+                                PlanCategories.of(item).contains(category),
+                          );
                           if (_selectedExperienceId != null &&
                               !categoryExperiences.any(
                                 (item) => item['id'] == _selectedExperienceId,
@@ -234,7 +292,7 @@ class _MapPageState extends State<MapPage> {
                             _selectedExperienceId = null;
                           }
                         }),
-                        backgroundColor: const Color(0xDD171F1B),
+                        backgroundColor: const Color(0xDD162642),
                         selectedColor: AppColors.primary,
                         side: BorderSide(
                           color: isSelected
@@ -243,7 +301,7 @@ class _MapPageState extends State<MapPage> {
                         ),
                         labelStyle: TextStyle(
                           color: isSelected
-                              ? const Color(0xFF06251A)
+                              ? const Color(0xFF0E1B34)
                               : AppColors.textPrimary,
                           fontWeight: FontWeight.w700,
                         ),
@@ -259,6 +317,12 @@ class _MapPageState extends State<MapPage> {
             bottom: selected == null ? 110 : 220,
             child: Column(
               children: [
+                _MapIconButton(
+                  tooltip: 'Orientar al norte',
+                  icon: Icons.explore_outlined,
+                  onPressed: () => _mapController.rotate(0),
+                ),
+                const SizedBox(height: 7),
                 _MapIconButton(
                   tooltip: 'Acercar',
                   icon: Icons.add_rounded,
@@ -310,7 +374,7 @@ class _MapPageState extends State<MapPage> {
             bottom: selected == null ? 84 : 202,
             child: _GlassPanel(
               child: Text(
-                '© Stadia Maps · © OpenMapTiles · © OpenStreetMap',
+                '© OpenStreetMap contributors',
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
                   fontSize: 9,
                   color: AppColors.textSecondary,
@@ -318,6 +382,18 @@ class _MapPageState extends State<MapPage> {
               ),
             ),
           ),
+          if (_failed)
+            Positioned(
+              top: 110,
+              left: 20,
+              right: 20,
+              child: Material(
+                child: TextButton(
+                  onPressed: _load,
+                  child: const Text('No pudimos cargar los planes. Reintentar'),
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -346,7 +422,7 @@ class _GlassPanel extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
     decoration: BoxDecoration(
-      color: const Color(0xF21A211E),
+      color: const Color(0xF2192B49),
       borderRadius: BorderRadius.circular(20),
       border: Border.all(color: AppColors.border),
     ),
@@ -367,7 +443,7 @@ class _MapIconButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Material(
-    color: const Color(0xDD171F1B),
+    color: const Color(0xDD162642),
     shape: const CircleBorder(),
     child: IconButton(
       tooltip: tooltip,
@@ -407,7 +483,7 @@ class _SelectedExperienceCard extends StatelessWidget {
             children: [
               ClipRRect(
                 borderRadius: BorderRadius.circular(16),
-                child: CachedNetworkImage(
+                child: MapoNetworkImage(
                   imageUrl: (experience['images'] as List<String>).first,
                   width: 86,
                   height: 86,
@@ -417,7 +493,7 @@ class _SelectedExperienceCard extends StatelessWidget {
                   placeholder: (_, _) => const SizedBox(
                     width: 86,
                     height: 86,
-                    child: ColoredBox(color: Color(0xFF202824)),
+                    child: ColoredBox(color: Color(0xFF233654)),
                   ),
                   errorWidget: (_, _, _) => const SizedBox(
                     width: 86,
@@ -449,7 +525,14 @@ class _SelectedExperienceCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 7),
                     Text(
-                      '${experience['experience_rating']} · Desde ${experience['price']}',
+                      '${experience['experience_rating']}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodySmall,
+                    ),
+                    MoneyText(
+                      amount: CurrencyService.amount(experience),
+                      prefix: 'Desde ',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.labelMedium?.copyWith(

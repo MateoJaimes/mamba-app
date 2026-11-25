@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../core/services/auth_service.dart';
+import '../../../../shared/widgets/mapo_logo.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_radius.dart';
 
@@ -78,11 +79,7 @@ class _PasswordRecoveryPageState extends State<PasswordRecoveryPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const Icon(
-                      Icons.lock_reset_rounded,
-                      size: 42,
-                      color: AppColors.primary,
-                    ),
+                    const Center(child: MapoLogo(symbolOnly: true, width: 74)),
                     const SizedBox(height: 14),
                     Text(
                       'Crea una nueva contraseña',

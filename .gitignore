@@ -32,6 +32,9 @@ migrate_working_dir/
 .pub/
 /build/
 /coverage/
+/.toolchain/
+/android/build/
+/supabase/.temp/
 
 # Local app credentials and developer-specific configuration
 .env

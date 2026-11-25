@@ -6,10 +6,14 @@ class CalendarMonth extends StatelessWidget {
     super.key,
     required this.selectedDate,
     required this.onDateSelected,
+    this.eventLoader,
+    this.onMonthChanged,
   });
 
   final DateTime selectedDate;
   final ValueChanged<DateTime> onDateSelected;
+  final List<Object> Function(DateTime)? eventLoader;
+  final ValueChanged<DateTime>? onMonthChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -23,6 +27,8 @@ class CalendarMonth extends StatelessWidget {
         border: Border.all(color: theme.colorScheme.outlineVariant),
       ),
       child: TableCalendar(
+        eventLoader: eventLoader,
+        onPageChanged: onMonthChanged,
         firstDay: DateTime(2020),
         lastDay: DateTime(2035),
         focusedDay: selectedDate,

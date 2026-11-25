@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../features/auth/presentation/pages/auth_page.dart';
 import '../../features/auth/presentation/pages/password_recovery_page.dart';
+import '../../features/auth/presentation/pages/auth_link_error_page.dart';
 import '../../features/profile/presentation/pages/profile_page.dart';
 import '../../features/calendar/presentation/pages/calendar_page.dart';
 import '../../features/feed/presentation/pages/feed_page.dart';
@@ -14,6 +15,10 @@ import '../../features/map/presentation/pages/map_page.dart';
 import '../../features/notifications/presentation/pages/notifications_page.dart';
 import 'main_shell.dart';
 import 'route_guards.dart';
+import 'account_destination.dart';
+import '../../features/hosts/presentation/pages/host_plans_page.dart';
+import '../../features/hosts/presentation/pages/host_agenda_page.dart';
+import '../../features/hosts/presentation/pages/host_dashboard_page.dart';
 
 GoRouter createAppRouter({
   required bool authConfigured,
@@ -28,7 +33,13 @@ GoRouter createAppRouter({
 
       final onAuthPage = state.matchedLocation == '/auth';
       final onRecoveryPage = state.matchedLocation == '/auth/update-password';
+      final onLinkErrorPage = state.matchedLocation == '/auth/link-error';
       if (!authConfigured) return onAuthPage ? null : '/auth';
+
+      if (authRefresh is AuthRouterRefresh && authRefresh.linkError != null) {
+        return onLinkErrorPage ? null : '/auth/link-error';
+      }
+      if (onLinkErrorPage) return '/auth';
 
       final signedIn = Supabase.instance.client.auth.currentSession != null;
       final isPasswordRecovery =
@@ -45,6 +56,18 @@ GoRouter createAppRouter({
       return null;
     },
     routes: [
+      GoRoute(
+        path: '/auth/link-error',
+        builder: (context, state) => AuthLinkErrorPage(
+          message: authRefresh is AuthRouterRefresh
+              ? authRefresh.linkError ?? 'Abre MAPO e inténtalo de nuevo.'
+              : 'Abre MAPO e inténtalo de nuevo.',
+          onContinue: () {
+            if (authRefresh is AuthRouterRefresh) authRefresh.clearLinkError();
+            context.go('/auth');
+          },
+        ),
+      ),
       GoRoute(
         path: '/auth',
         builder: (context, state) => AuthPage(authConfigured: authConfigured),
@@ -81,7 +104,10 @@ GoRouter createAppRouter({
               GoRoute(
                 path: '/map',
                 builder: (context, state) {
-                  return const MapPage();
+                  return const AccountDestination(
+                    tourist: MapPage(),
+                    host: HostPlansPage(),
+                  );
                 },
               ),
             ],
@@ -115,7 +141,10 @@ GoRouter createAppRouter({
               GoRoute(
                 path: '/calendar',
                 builder: (context, state) {
-                  return const CalendarPage();
+                  return const AccountDestination(
+                    tourist: CalendarPage(),
+                    host: HostAgendaPage(),
+                  );
                 },
               ),
             ],
@@ -127,7 +156,10 @@ GoRouter createAppRouter({
               GoRoute(
                 path: '/profile',
                 builder: (context, state) {
-                  return const ProfilePage();
+                  return const AccountDestination(
+                    tourist: ProfilePage(),
+                    host: HostDashboardPage(embedded: true),
+                  );
                 },
               ),
             ],

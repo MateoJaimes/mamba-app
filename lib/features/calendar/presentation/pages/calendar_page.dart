@@ -1,9 +1,11 @@
+import '../../../../shared/widgets/mapo_network_image.dart';
 import 'package:flutter/material.dart';
 
 import '../../../bookings/data/local_booking_store.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../widgets/calendar_header.dart';
 import '../widgets/calendar_month.dart';
+import '../../../hosts/presentation/pages/manage_bookings_page.dart';
 
 class CalendarPage extends StatefulWidget {
   const CalendarPage({super.key});
@@ -40,6 +42,18 @@ class _CalendarPageState extends State<CalendarPage> {
               sliver: SliverList(
                 delegate: SliverChildListDelegate([
                   const CalendarHeader(),
+                  TextButton(
+                    onPressed: () async {
+                      await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const ManageBookingsPage(),
+                        ),
+                      );
+                      if (mounted) await _loadLocalBookings();
+                    },
+                    child: const Text('Ver y gestionar mis inscripciones'),
+                  ),
                   const SizedBox(height: 24),
 
                   CalendarMonth(
@@ -142,12 +156,12 @@ class _BookingsForDate extends StatelessWidget {
                   children: [
                     ClipRRect(
                       borderRadius: BorderRadius.circular(14),
-                      child: Image.network(
-                        booking['image'] as String? ?? '',
+                      child: MapoNetworkImage(
+                        imageUrl: booking['image'] as String? ?? '',
                         width: 68,
                         height: 68,
                         fit: BoxFit.cover,
-                        errorBuilder: (_, _, _) => const SizedBox(
+                        errorWidget: (_, _, _) => const SizedBox(
                           width: 68,
                           height: 68,
                           child: Icon(Icons.landscape_outlined),
@@ -173,7 +187,7 @@ class _BookingsForDate extends StatelessWidget {
                           Text(
                             '${booking['adults'] ?? booking['guests']} adultos · '
                             '${booking['minors'] ?? 0} menores · '
-                            '${booking['status'] == 'requested' ? 'Pendiente de confirmación' : 'Inscripción local'}',
+                            '${bookingStatusLabel('${booking['status']}')}',
                             style: theme.textTheme.bodySmall?.copyWith(
                               color: theme.colorScheme.primary,
                             ),

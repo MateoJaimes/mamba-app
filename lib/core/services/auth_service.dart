@@ -46,7 +46,8 @@ class AuthService {
         'last_names': lastNames.trim(),
         'document_type': documentType,
         'document_number': documentNumber.trim().toUpperCase(),
-        'birth_date': '${birthDate.year.toString().padLeft(4, '0')}-${birthDate.month.toString().padLeft(2, '0')}-${birthDate.day.toString().padLeft(2, '0')}',
+        'birth_date':
+            '${birthDate.year.toString().padLeft(4, '0')}-${birthDate.month.toString().padLeft(2, '0')}-${birthDate.day.toString().padLeft(2, '0')}',
         'phone_number': phoneNumber.trim(),
         'account_intent': intent.name,
       },
@@ -57,6 +58,14 @@ class AuthService {
     return _client.auth.resetPasswordForEmail(
       email.trim(),
       redirectTo: AppEnvironment.authRedirectUri,
+    );
+  }
+
+  Future<void> resendConfirmation(String email) async {
+    await _client.auth.resend(
+      type: OtpType.signup,
+      email: email.trim(),
+      emailRedirectTo: AppEnvironment.authRedirectUri,
     );
   }
 

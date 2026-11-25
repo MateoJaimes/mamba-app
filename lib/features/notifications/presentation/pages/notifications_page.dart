@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/services/mamba_data_service.dart';
+import '../../../../core/services/mapo_data_service.dart';
 import '../../../../core/theme/app_colors.dart';
 
 class NotificationsPage extends StatefulWidget {
@@ -16,11 +16,11 @@ class _NotificationsPageState extends State<NotificationsPage> {
   @override
   void initState() {
     super.initState();
-    _notifications = MambaDataService.fetchNotifications();
+    _notifications = MapoDataService.fetchNotifications();
   }
 
   Future<void> _refresh() async {
-    final next = MambaDataService.fetchNotifications();
+    final next = MapoDataService.fetchNotifications();
     setState(() => _notifications = next);
     await next;
   }
@@ -42,12 +42,14 @@ class _NotificationsPageState extends State<NotificationsPage> {
                     icon: const Icon(Icons.chevron_left_rounded),
                   ),
                   Expanded(
-                    child: Text('Notificaciones',
-                        textAlign: TextAlign.center,
-                        style: theme.textTheme.titleLarge?.copyWith(
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.w900,
-                        )),
+                    child: Text(
+                      'Notificaciones',
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
                   ),
                   const SizedBox(width: 48),
                 ],
@@ -65,7 +67,9 @@ class _NotificationsPageState extends State<NotificationsPage> {
                       child: TextButton.icon(
                         onPressed: _refresh,
                         icon: const Icon(Icons.refresh_rounded),
-                        label: const Text('No cargaron. Toca para intentar de nuevo.'),
+                        label: const Text(
+                          'No cargaron. Toca para intentar de nuevo.',
+                        ),
                       ),
                     );
                   }
@@ -77,10 +81,15 @@ class _NotificationsPageState extends State<NotificationsPage> {
                         physics: const AlwaysScrollableScrollPhysics(),
                         children: const [
                           SizedBox(height: 170),
-                          Icon(Icons.notifications_none_rounded,
-                              size: 48, color: AppColors.primary),
+                          Icon(
+                            Icons.notifications_none_rounded,
+                            size: 48,
+                            color: AppColors.primary,
+                          ),
                           SizedBox(height: 16),
-                          Center(child: Text('Todavía no tienes notificaciones.')),
+                          Center(
+                            child: Text('Todavía no tienes notificaciones.'),
+                          ),
                         ],
                       ),
                     );
@@ -104,17 +113,30 @@ class _NotificationsPageState extends State<NotificationsPage> {
                               borderRadius: BorderRadius.circular(20),
                             ),
                             leading: CircleAvatar(
-                              backgroundColor: AppColors.primary.withValues(alpha: .16),
-                              child: Icon(_iconFor('${item['kind']}'), color: AppColors.primary),
+                              backgroundColor: AppColors.primary.withValues(
+                                alpha: .16,
+                              ),
+                              child: Icon(
+                                _iconFor('${item['kind']}'),
+                                color: AppColors.primary,
+                              ),
                             ),
-                            title: Text('${item['title'] ?? 'Novedad en MAMBA'}'),
+                            title: Text(
+                              '${item['title'] ?? 'Novedad en MAPO'}',
+                            ),
                             subtitle: Text('${item['body'] ?? ''}'),
                             trailing: isUnread
-                                ? const Icon(Icons.circle, size: 9, color: AppColors.primary)
+                                ? const Icon(
+                                    Icons.circle,
+                                    size: 9,
+                                    color: AppColors.primary,
+                                  )
                                 : null,
                             onTap: isUnread
                                 ? () async {
-                                    await MambaDataService.markNotificationRead('${item['id']}');
+                                    await MapoDataService.markNotificationRead(
+                                      '${item['id']}',
+                                    );
                                     if (mounted) _refresh();
                                   }
                                 : null,
@@ -133,9 +155,9 @@ class _NotificationsPageState extends State<NotificationsPage> {
   }
 
   IconData _iconFor(String kind) => switch (kind) {
-        'booking' => Icons.confirmation_number_outlined,
-        'review' => Icons.star_outline_rounded,
-        'follow' => Icons.person_add_alt_1_rounded,
-        _ => Icons.notifications_none_rounded,
-      };
+    'booking' => Icons.confirmation_number_outlined,
+    'review' => Icons.star_outline_rounded,
+    'follow' => Icons.person_add_alt_1_rounded,
+    _ => Icons.notifications_none_rounded,
+  };
 }
