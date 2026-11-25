@@ -3,7 +3,7 @@ alter table public.experience_comments
   add column if not exists author_avatar_url text;
 
 update public.experience_comments c
-set author_name = coalesce(p.display_name, 'Viajero MAMBA'),
+set author_name = coalesce(p.display_name, 'Viajero MAPO'),
     author_avatar_url = p.avatar_url
 from public.profiles p
 where p.id = c.user_id and c.author_name is null;

@@ -1,4 +1,4 @@
--- MAMBA initial Supabase schema.
+-- MAPO initial Supabase schema.
 -- Auth is owned by Supabase. Public roles are assigned only by trusted SQL.
 
 create schema if not exists private;
@@ -247,7 +247,7 @@ begin
   display_name_value := coalesce(
     nullif(trim(new.raw_user_meta_data ->> 'display_name'), ''),
     nullif(split_part(coalesce(new.email, ''), '@', 1), ''),
-    'Viajero MAMBA'
+    'Viajero MAPO'
   );
   account_intent_value := case
     when new.raw_user_meta_data ->> 'account_intent' = 'experienceHost' then 'experience_host'
@@ -733,7 +733,7 @@ declare
  display_name_value text;
  account_intent_value text;
 begin
- display_name_value := coalesce(nullif(trim(first_names_value||' '||last_names_value),''),nullif(trim(new.raw_user_meta_data->>'display_name'),''),nullif(split_part(coalesce(new.email,''),'@',1),''),'Viajero MAMBA');
+ display_name_value := coalesce(nullif(trim(first_names_value||' '||last_names_value),''),nullif(trim(new.raw_user_meta_data->>'display_name'),''),nullif(split_part(coalesce(new.email,''),'@',1),''),'Viajero MAPO');
  account_intent_value := case when new.raw_user_meta_data->>'account_intent'='experienceHost' then 'experience_host' else 'tourist' end;
  insert into public.profiles(id,display_name,first_names,last_names,account_intent) values(new.id,display_name_value,first_names_value,last_names_value,account_intent_value)
  on conflict(id) do update set display_name=excluded.display_name,first_names=excluded.first_names,last_names=excluded.last_names,account_intent=excluded.account_intent;
@@ -797,7 +797,7 @@ declare
  display_name_value text;
  account_intent_value text;
 begin
- display_name_value := coalesce(nullif(trim(first_names_value||' '||last_names_value),''),nullif(trim(new.raw_user_meta_data->>'display_name'),''),nullif(split_part(coalesce(new.email,''),'@',1),''),'Viajero MAMBA');
+ display_name_value := coalesce(nullif(trim(first_names_value||' '||last_names_value),''),nullif(trim(new.raw_user_meta_data->>'display_name'),''),nullif(split_part(coalesce(new.email,''),'@',1),''),'Viajero MAPO');
  account_intent_value := case when new.raw_user_meta_data->>'account_intent'='experienceHost' then 'experience_host' else 'tourist' end;
  insert into public.profiles(id,display_name,first_names,last_names,account_intent) values(new.id,display_name_value,first_names_value,last_names_value,account_intent_value)
  on conflict(id) do update set display_name=excluded.display_name,first_names=excluded.first_names,last_names=excluded.last_names,account_intent=excluded.account_intent;
@@ -878,7 +878,7 @@ alter table public.experience_comments
   add column if not exists author_avatar_url text;
 
 update public.experience_comments c
-set author_name = coalesce(p.display_name, 'Viajero MAMBA'),
+set author_name = coalesce(p.display_name, 'Viajero MAPO'),
     author_avatar_url = p.avatar_url
 from public.profiles p
 where p.id = c.user_id and c.author_name is null;

@@ -1,6 +1,13 @@
 import { Injectable, ServiceUnavailableException, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
+export function sessionAuthorization(authorization?: string): string | undefined {
+  if (!authorization?.startsWith('Bearer ') || authorization.startsWith('Bearer sb_publishable_')) {
+    return undefined;
+  }
+  return authorization;
+}
+
 @Injectable()
 export class SupabaseService {
   private readonly baseUrl: string;
@@ -12,14 +19,14 @@ export class SupabaseService {
     if(!this.key.startsWith('sb_publishable_'))throw new Error('Usa la llave publicable de Supabase');
   }
   async request(path:string,method:string,token?:string,body?:unknown,extra:Record<string,string>={}) {
-    if(token==='Bearer sb_publishable_mamba_frontend')token=undefined;
+    token=sessionAuthorization(token);
     try {
       return await fetch(this.baseUrl+path,{method,headers:{apikey:this.key,'Content-Type':'application/json',...(token?{Authorization:token}:{}),...extra},
         body:body===undefined?undefined:JSON.stringify(body),signal:AbortSignal.timeout(15000),redirect:'manual'});
     } catch {throw new ServiceUnavailableException('El servicio de datos no está disponible.');}
   }
   async user(token?:string):Promise<{id:string;email?:string}> {
-    if(!token?.startsWith('Bearer '))throw new UnauthorizedException('Inicia sesión');
+    if(!sessionAuthorization(token))throw new UnauthorizedException('Inicia sesión');
     const r=await this.request('/auth/v1/user','GET',token);
     if(!r.ok)throw new UnauthorizedException('Sesión inválida o vencida');
     return r.json();

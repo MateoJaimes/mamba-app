@@ -833,7 +833,7 @@ class _MeetingPointMap extends StatelessWidget {
               TileLayer(
                 urlTemplate:
                     'https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}.png',
-                userAgentPackageName: 'com.mamba.mamba_app',
+                userAgentPackageName: 'com.mapo.app',
                 maxNativeZoom: 16,
                 keepBuffer: 0,
                 panBuffer: 0,

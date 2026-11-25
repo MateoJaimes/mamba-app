@@ -27,7 +27,7 @@ const host =
     AccountSnapshot({'display_name': 'Nombre privado'}, {'host'}, null, {
       'id': 'mine',
       'display_name': 'MAPO Experiencias',
-      'handle': 'somosmamba',
+      'handle': 'somosmapo',
       'city': 'Medellín',
       'bio': 'Historias, café y montañas para compartir.',
       'approved_at': 'today',

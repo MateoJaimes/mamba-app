@@ -71,7 +71,7 @@ class CurrencyService extends ChangeNotifier {
     updatedAt = data['updatedAt'] as String?;
     stale = data['stale'] == true;
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('mamba.currency', value);
+    await prefs.setString('mapo.currency', value);
     notifyListeners();
   }
 

@@ -98,7 +98,7 @@ begin
    if next_status='approved' then
      insert into public.user_roles(user_id,role,granted_by) values(target,'host',actor) on conflict(user_id,role) do nothing;
      insert into public.host_profiles(owner_id,handle,display_name,bio,city,approved_at)
-       values(target,'mamba_'||replace(target::text,'-',''),app.business_name,app.experience_description,app.city,now())
+       values(target,'mapo_'||replace(target::text,'-',''),app.business_name,app.experience_description,app.city,now())
        on conflict(owner_id) do update set approved_at=now();
    else
      delete from public.user_roles where user_id=target and role='host';
@@ -155,7 +155,7 @@ language plpgsql security definer set search_path='' as $$
 declare host_owner uuid; experience_title text;
 begin
  select h.owner_id,e.title into host_owner,experience_title from public.experiences e join public.host_profiles h on h.id=e.host_profile_id where e.id=new.experience_id;
- insert into public.notifications(user_id,kind,title,body,payload) values(new.user_id,'booking','Inscripción confirmada','Tu cupo para '||coalesce(experience_title,'la experiencia')||' está confirmado. Paga presencialmente al anfitrión; MAMBA no realiza ningún cobro.',jsonb_build_object('booking_id',new.id,'experience_id',new.experience_id));
+ insert into public.notifications(user_id,kind,title,body,payload) values(new.user_id,'booking','Inscripción confirmada','Tu cupo para '||coalesce(experience_title,'la experiencia')||' está confirmado. Paga presencialmente al anfitrión; MAPO no realiza ningún cobro.',jsonb_build_object('booking_id',new.id,'experience_id',new.experience_id));
  if host_owner is not null and host_owner<>new.user_id then
    insert into public.notifications(user_id,kind,title,body,payload) values(host_owner,'booking','Nueva inscripción confirmada','Tienes nuevos participantes para '||coalesce(experience_title,'una experiencia')||'. No necesitas aceptar la inscripción. El pago se realiza presencialmente contigo.',jsonb_build_object('booking_id',new.id,'experience_id',new.experience_id));
  end if;
@@ -169,12 +169,12 @@ from public.bookings b join public.experiences e on e.id=b.experience_id join pu
 -- The legacy flag now agrees with the enforced workflow, including future plans.
 alter table public.experiences alter column instant_booking set default true;
 update public.experiences set instant_booking=true;
--- Update only the MAMBA seed descriptions that still describe manual approval.
+-- Update only the MAPO seed descriptions that still describe manual approval.
 update public.experiences set description=replace(replace(replace(replace(replace(description,
  'La solicitud queda sujeta a confirmación del anfitrión; el horario se acuerda antes de asistir.','La inscripción se confirma automáticamente según los cupos disponibles. El pago se realiza presencialmente con el anfitrión; coordina el horario antes de asistir.'),
  'El lugar y el horario se coordinan al confirmar tu solicitud, en el sector Manila.','La inscripción se confirma automáticamente según los cupos disponibles. El lugar y el horario se coordinan con el anfitrión en el sector Manila. El pago se realiza presencialmente con el anfitrión.'),
  'El lugar y el horario se coordinan al confirmar tu solicitud, en el sector Manila.','El lugar y el horario se coordinan con el anfitrión, en el sector Manila.'),
  'La solicitud requiere confirmación del anfitrión y puede reprogramarse por lluvia intensa.','La inscripción se confirma automáticamente según los cupos disponibles y puede reprogramarse por lluvia intensa. El pago se realiza presencialmente con el anfitrión.'),
  'La dirección se confirma antes de aceptar la solicitud.','La dirección se coordina con el anfitrión antes de asistir.')
-where slug in ('mamba-comuna-13','mamba-cafe-de-origen','mamba-santa-elena-bosque');
-update public.experiences set meeting_point=replace(meeting_point,'La dirección se confirma antes de aceptar la solicitud.','La dirección se coordina con el anfitrión antes de asistir.') where slug='mamba-cafe-de-origen';
+where slug in ('mapo-comuna-13','mapo-cafe-de-origen','mapo-santa-elena-bosque');
+update public.experiences set meeting_point=replace(meeting_point,'La dirección se confirma antes de aceptar la solicitud.','La dirección se coordina con el anfitrión antes de asistir.') where slug='mapo-cafe-de-origen';

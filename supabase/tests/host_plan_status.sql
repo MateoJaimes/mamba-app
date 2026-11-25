@@ -1,5 +1,5 @@
 begin;
-select set_config('request.jwt.claim.sub',(select id::text from auth.users where email='somosmambaapp@gmail.com'),true);
+select set_config('request.jwt.claim.sub',(select id::text from auth.users where email='somosmapoapp@gmail.com'),true);
 set local role authenticated;
 do $$
 declare plan public.experiences; payload jsonb; count_before integer;

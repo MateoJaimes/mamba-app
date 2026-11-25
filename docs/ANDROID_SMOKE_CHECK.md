@@ -1,6 +1,6 @@
 # Comprobación en un Android real
 
-Instalar `build/app/outputs/flutter-apk/mamba.apk` (versión 1.0.0+3).
+Instalar `build/app/outputs/flutter-apk/app-release.apk` (paquete `com.mapo.app`).
 
 1. Entrar como turista. En Perfil, abrir el engranaje, elegir país y ciudad.
    Para Colombia, seleccionar departamento y municipio. Cambiar a USD y comprobar
@@ -15,7 +15,7 @@ Instalar `build/app/outputs/flutter-apk/mamba.apk` (versión 1.0.0+3).
    si persisten. La precarga no elimina la latencia de una conexión lenta.
 5. Rotar y desplazar el mapa. Usar Orientar al norte y Centrar planes.
    Comprobar nombre, ausencia de reseñas cuando corresponde y precio del marcador.
-6. Entrar como somosmambaapp@gmail.com. Configuración → Mi espacio de anfitrión.
+6. Entrar como somosmapoapp@gmail.com. Configuración → Mi espacio de anfitrión.
    Editar uno de los tres planes, escoger varias categorías y añadir una foto
    propia. Guardar y comprobar su aparición bajo cada categoría.
 7. Enviar una solicitud de inscripción desde una segunda cuenta turista,

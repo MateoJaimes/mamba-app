@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart';
 abstract final class AppEnvironment {
   // The APK only knows the NestJS API. Supabase credentials live on the server.
   static const supabaseUrl = String.fromEnvironment('API_BASE_URL');
-  static const supabasePublishableKey = 'sb_publishable_mamba_frontend';
+  static const supabasePublishableKey = 'sb_publishable_mapo_frontend';
   static const authRedirectUri =
       'https://mapo-experiencias-api.vercel.app/auth/callback';
   static const mapTileUrl = String.fromEnvironment(

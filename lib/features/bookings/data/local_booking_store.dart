@@ -7,7 +7,7 @@ import '../../../core/services/mapo_data_service.dart';
 
 /// Server-backed bookings; legacy device drafts are only readable offline.
 abstract final class LocalBookingStore {
-  static const _storageKey = 'mamba.local_booking_intents.v1';
+  static const _storageKey = 'mapo.local_booking_intents.v1';
   static final changes = ValueNotifier<List<Map<String, dynamic>>>(const []);
 
   static Future<List<Map<String, dynamic>>> getAll() async {

@@ -40,7 +40,7 @@ begin
    if next_status='approved' then
      insert into public.user_roles(user_id,role,granted_by) values(target,'host',actor) on conflict(user_id,role) do nothing;
      insert into public.host_profiles(owner_id,handle,display_name,bio,city,approved_at)
-       values(target,'mamba_'||replace(target::text,'-',''),app.business_name,app.experience_description,app.city,now())
+       values(target,'mapo_'||replace(target::text,'-',''),app.business_name,app.experience_description,app.city,now())
        on conflict(owner_id) do update set approved_at=now();
    else
      delete from public.user_roles where user_id=target and role='host';

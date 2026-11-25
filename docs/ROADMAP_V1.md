@@ -29,7 +29,7 @@
 | Favoritos y acciones sociales | 🟡 En curso | Botones locales en publicaciones; tablas SQL de favoritos | Persistir, sincronizar y definir si comentarios/me gusta son parte de 1.0 |
 | Perfil y soporte | 🟡 En curso | Pantalla estática y menú visual | Datos del usuario, edición, ajustes, ayuda y cerrar/eliminar cuenta |
 | Notificaciones | ⬜ Pendiente | Dependencia y tablas SQL | Permisos, registro de dispositivo, envío y preferencias |
-| Seguridad y backend | ⬜ Pendiente | Scripts SQL amplios en esquema `mamba` | Elegir arquitectura de auth, acceso de datos, RLS/GRANT, vistas seguras y despliegue verificable |
+| Seguridad y backend | ⬜ Pendiente | Scripts de base de datos y migraciones Supabase | Elegir arquitectura de auth, acceso de datos, RLS/GRANT, vistas seguras y despliegue verificable |
 | Preparación de tiendas | ⬜ Pendiente | Carpetas Android e iOS generadas | IDs/nombres finales, firma release, iconos, privacidad, builds y checklist de publicación |
 
 ## Ruta por funcionalidades
@@ -53,7 +53,7 @@
 
 **Estado: ⬜ Pendiente**
 
-- [ ] Elegir una sola fuente de identidad. El SQL define `mamba.users`; la app no integra todavía Supabase Auth ni otra solución.
+- [ ] Integrar Supabase Auth como fuente de identidad y asociar cada cuenta con su perfil.
 - [ ] Diseñar y construir registro, inicio/cierre de sesión y recuperación de contraseña.
 - [ ] Persistir sesión de forma segura y proteger rutas privadas.
 - [ ] Crear/editar nombre, foto, teléfono y preferencias del perfil.

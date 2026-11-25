@@ -1,7 +1,7 @@
 import { All, Body, Controller, ForbiddenException, Param, Req, Res, UnauthorizedException } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import type { Request, Response } from 'express';
-import { SupabaseService } from './supabase.service';
+import { SupabaseService, sessionAuthorization } from './supabase.service';
 import { authEmailRedirect } from './auth-redirect';
 
 const resources = new Map<string, Set<string>>([
@@ -56,7 +56,7 @@ export class GatewayController {
   async data(@Param('resource')resource:string,@Req()req:Request,@Res()res:Response,@Body()body:unknown){
     if(!allowedResource(resource,req.method))throw new ForbiddenException('Operación no disponible');
     const token=req.header('authorization');
-    if(!(req.method==='GET'&&anonymous.has(resource)) && (!token?.startsWith('Bearer ')||token==='Bearer sb_publishable_mamba_frontend'))throw new UnauthorizedException('Inicia sesión');
+    if(!(req.method==='GET'&&anonymous.has(resource)) && !sessionAuthorization(token))throw new UnauthorizedException('Inicia sesión');
     return this.relay(`/rest/v1/${resource}${req.originalUrl.includes('?')?'?'+req.originalUrl.split('?').slice(1).join('?'):''}`,req,res,body);
   }
   @All('rest/v1/rpc/:name')

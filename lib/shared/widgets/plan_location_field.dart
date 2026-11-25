@@ -46,7 +46,7 @@ class PlanLocationField extends StatelessWidget {
                     children: [
                       TileLayer(
                         urlTemplate: AppEnvironment.mapTileUrl,
-                        userAgentPackageName: 'com.mamba.mamba_app',
+                        userAgentPackageName: 'com.mapo.app',
                         maxNativeZoom: 16,
                       ),
                       MarkerLayer(

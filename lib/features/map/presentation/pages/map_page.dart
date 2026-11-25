@@ -139,7 +139,7 @@ class _MapPageState extends State<MapPage> {
               children: [
                 TileLayer(
                   urlTemplate: AppEnvironment.mapTileUrl,
-                  userAgentPackageName: 'com.mamba.mamba_app',
+                  userAgentPackageName: 'com.mapo.app',
                   maxNativeZoom: 16,
                   keepBuffer: 1,
                   panBuffer: 0,

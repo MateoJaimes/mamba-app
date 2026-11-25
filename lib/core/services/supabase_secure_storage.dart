@@ -7,8 +7,8 @@ class SupabaseSecureStorage extends LocalStorage implements GotrueAsyncStorage {
   SupabaseSecureStorage({
     required String projectHost,
     FlutterSecureStorage? storage,
-  }) : _sessionKey = 'mamba.supabase.session.$projectHost',
-       _pkcePrefix = 'mamba.supabase.pkce.$projectHost.',
+  }) : _sessionKey = 'mapo.supabase.session.$projectHost',
+       _pkcePrefix = 'mapo.supabase.pkce.$projectHost.',
        _storage = storage ?? const FlutterSecureStorage();
 
   final String _sessionKey;
